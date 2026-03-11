@@ -1,6 +1,5 @@
 "use client";
 
-import DashboardLayout from "@/components/layout/DashboardLayout";
 import PageHeader from "@/components/layout/PageHeader";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
@@ -141,7 +140,7 @@ export default function AgendaPage() {
   };
 
   return (
-    <DashboardLayout>
+    <>
       <PageHeader
         title="Agenda Kegiatan"
         subtitle="Kelola jadwal kegiatan masjid"
@@ -332,6 +331,6 @@ export default function AgendaPage() {
           </div>
         </form>
       </Modal>
-    </DashboardLayout>
+    </>
   );
 }

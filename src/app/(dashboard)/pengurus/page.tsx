@@ -1,6 +1,5 @@
 "use client";
 
-import DashboardLayout from "@/components/layout/DashboardLayout";
 import PageHeader from "@/components/layout/PageHeader";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
@@ -119,7 +118,7 @@ export default function PengurusPage() {
   const update = (f: string, v: string) => setFormData({ ...formData, [f]: v });
 
   return (
-    <DashboardLayout>
+    <>
       <PageHeader
         title="Pengurus"
         subtitle="Kelola data pengurus masjid"
@@ -226,6 +225,6 @@ export default function PengurusPage() {
           </div>
         </form>
       </Modal>
-    </DashboardLayout>
+    </>
   );
 }

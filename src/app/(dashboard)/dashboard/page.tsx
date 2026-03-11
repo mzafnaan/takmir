@@ -1,7 +1,6 @@
 "use client";
 
 import StatCard from "@/components/cards/StatCard";
-import DashboardLayout from "@/components/layout/DashboardLayout";
 import PageHeader from "@/components/layout/PageHeader";
 import Badge from "@/components/ui/Badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -102,7 +101,7 @@ export default function DashboardPage() {
   const totalInventaris = 48;
 
   return (
-    <DashboardLayout>
+    <>
       <PageHeader
         title="Dashboard"
         subtitle="Selamat datang di panel pengurus masjid"
@@ -148,7 +147,7 @@ export default function DashboardPage() {
             {agendas.map((agenda) => (
               <div
                 key={agenda.id}
-                className="flex items-start gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors"
+                className="flex items-start gap-4 p-4 rounded-xl border border-gray-100 bg-white hover:border-primary/30 hover:shadow-sm transition-all"
               >
                 <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-blue-50 flex flex-col items-center justify-center">
                   <span className="text-xs font-bold text-primary">
@@ -185,7 +184,7 @@ export default function DashboardPage() {
             {pengumuman.map((item) => (
               <div
                 key={item.id}
-                className="p-3 rounded-xl hover:bg-gray-50 transition-colors"
+                className="p-4 rounded-xl border border-gray-100 bg-white hover:border-primary/30 hover:shadow-sm transition-all"
               >
                 <div className="flex items-start justify-between gap-3 mb-1">
                   <h3 className="text-base font-semibold text-text-primary">
@@ -207,6 +206,6 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-    </DashboardLayout>
+    </>
   );
 }

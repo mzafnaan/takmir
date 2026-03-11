@@ -1,7 +1,6 @@
 "use client";
 
 import StatCard from "@/components/cards/StatCard";
-import DashboardLayout from "@/components/layout/DashboardLayout";
 import PageHeader from "@/components/layout/PageHeader";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
@@ -147,7 +146,7 @@ export default function KeuanganPage() {
     formData.jenis === "pemasukan" ? KATEGORI_PEMASUKAN : KATEGORI_PENGELUARAN;
 
   return (
-    <DashboardLayout>
+    <>
       <PageHeader
         title="Keuangan"
         subtitle="Kelola kas masjid"
@@ -317,6 +316,6 @@ export default function KeuanganPage() {
           </div>
         </form>
       </Modal>
-    </DashboardLayout>
+    </>
   );
 }

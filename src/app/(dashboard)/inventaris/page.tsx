@@ -1,7 +1,6 @@
 "use client";
 
 import StatCard from "@/components/cards/StatCard";
-import DashboardLayout from "@/components/layout/DashboardLayout";
 import PageHeader from "@/components/layout/PageHeader";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
@@ -186,7 +185,7 @@ export default function InventarisPage() {
     setFormData({ ...formData, [f]: v });
 
   return (
-    <DashboardLayout>
+    <>
       <PageHeader
         title="Inventaris"
         subtitle="Kelola aset masjid"
@@ -407,6 +406,6 @@ export default function InventarisPage() {
           </div>
         </form>
       </Modal>
-    </DashboardLayout>
+    </>
   );
 }

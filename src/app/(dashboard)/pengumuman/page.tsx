@@ -1,6 +1,5 @@
 "use client";
 
-import DashboardLayout from "@/components/layout/DashboardLayout";
 import PageHeader from "@/components/layout/PageHeader";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
@@ -152,7 +151,7 @@ export default function PengumumanPage() {
   };
 
   return (
-    <DashboardLayout>
+    <>
       <PageHeader
         title="Pengumuman"
         subtitle="Kelola pengumuman untuk pengurus masjid"
@@ -301,6 +300,6 @@ export default function PengumumanPage() {
           </div>
         </form>
       </Modal>
-    </DashboardLayout>
+    </>
   );
 }
