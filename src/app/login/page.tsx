@@ -2,7 +2,9 @@
 
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import { signIn } from "@/services/firebase/auth";
+import { signIn, signOut } from "@/services/firebase/auth";
+import { db } from "@/services/firebase/config";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 
@@ -20,6 +22,22 @@ export default function LoginPage() {
 
     try {
       await signIn(email, password);
+      
+      // Validasi apakah email masih terdaftar di koleksi users Firestore
+      const q = query(collection(db, "users"), where("email", "==", email));
+      const querySnapshot = await getDocs(q);
+      
+      if (querySnapshot.empty) {
+        // Cek apakah database users benar-benar kosong (kasus baru pertama kali / recovery)
+        const allUsersSnap = await getDocs(collection(db, "users"));
+        if (!allUsersSnap.empty) {
+          await signOut(); // Kick them out immediately
+          setError("Akun ini tidak terdaftar sebagai pengurus (mungkin sudah dihapus).");
+          setLoading(false);
+          return;
+        }
+      }
+
       router.push("/dashboard");
     } catch (err: unknown) {
       const firebaseError = err as { code?: string; message?: string };

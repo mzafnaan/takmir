@@ -6,6 +6,13 @@ export interface User {
   createdAt: string;
 }
 
+export interface UserFormData {
+  name: string;
+  email: string;
+  password: string;
+  role: string;
+}
+
 export interface Agenda {
   id: string;
   judul: string;

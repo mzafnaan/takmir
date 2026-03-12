@@ -1,12 +1,19 @@
 "use client";
 
-import React from "react";
+import { useEffect, useRef, useState } from "react";
+import { HiCheck, HiSelector } from "react-icons/hi";
 
-interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
+interface SelectProps {
   label?: string;
   options: { value: string; label: string }[];
   error?: string;
   placeholder?: string;
+  value?: string;
+  onChange?: (e: { target: { value: string } }) => void;
+  required?: boolean;
+  disabled?: boolean;
+  className?: string;
+  id?: string;
 }
 
 export default function Select({
@@ -14,34 +21,66 @@ export default function Select({
   options,
   error,
   placeholder = "Pilih...",
+  value,
+  onChange,
+  required,
+  disabled,
   className = "",
   id,
-  ...props
 }: SelectProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   const selectId = id || label?.toLowerCase().replace(/\s+/g, "-");
+
+  const selectedOption = options.find((opt) => opt.value === value);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsOpen(false);
+    };
+    if (isOpen) window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, [isOpen]);
+
+  const handleSelect = (optValue: string) => {
+    onChange?.({ target: { value: optValue } });
+    setIsOpen(false);
+  };
+
   return (
-    <div className="w-full">
+    <div className={`w-full relative ${className}`} ref={containerRef}>
       {label && (
         <label
           htmlFor={selectId}
-          className="block text-sm font-semibold text-text-primary mb-1.5"
+          className="block text-[13px] font-medium text-text-secondary mb-1.5"
         >
           {label}
+          {required && <span className="text-danger ml-0.5">*</span>}
         </label>
       )}
+
+      {/* Hidden native select for form validation */}
       <select
         id={selectId}
-        className={`
-          w-full px-4 py-3 text-base rounded-xl border border-border
-          bg-white text-text-primary
-          focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent
-          transition-all duration-200 appearance-none
-          bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22%236B7280%22%3E%3Cpath%20fill-rule%3D%22evenodd%22%20d%3D%22M5.23%207.21a.75.75%200%20011.06.02L10%2011.168l3.71-3.938a.75.75%200%20111.08%201.04l-4.25%204.5a.75.75%200%2001-1.08%200l-4.25-4.5a.75.75%200%2001.02-1.06z%22%20clip-rule%3D%22evenodd%22/%3E%3C/svg%3E')]
-          bg-[length:1.25rem] bg-[right_0.75rem_center] bg-no-repeat
-          ${error ? "border-danger ring-1 ring-danger" : ""}
-          ${className}
-        `}
-        {...props}
+        value={value}
+        onChange={() => {}}
+        required={required}
+        tabIndex={-1}
+        className="sr-only"
+        aria-hidden="true"
       >
         <option value="">{placeholder}</option>
         {options.map((opt) => (
@@ -50,7 +89,59 @@ export default function Select({
           </option>
         ))}
       </select>
-      {error && <p className="mt-1 text-sm text-danger">{error}</p>}
+
+      {/* Custom dropdown trigger */}
+      <button
+        type="button"
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        disabled={disabled}
+        className={`
+          w-full h-[42px] flex items-center justify-between px-3 text-sm rounded-lg
+          border bg-white transition-all duration-150 cursor-pointer text-left
+          ${isOpen ? "border-primary ring-2 ring-primary/20" : "border-border hover:border-gray-300"}
+          ${error ? "border-danger ring-1 ring-danger/20" : ""}
+          ${disabled ? "opacity-50 cursor-not-allowed bg-gray-50" : ""}
+        `}
+      >
+        <span
+          className={
+            selectedOption
+              ? "text-text-primary truncate"
+              : "text-text-secondary/50 truncate"
+          }
+        >
+          {selectedOption ? selectedOption.label : placeholder}
+        </span>
+        <HiSelector className="w-4 h-4 text-text-secondary/40 flex-shrink-0 ml-2" />
+      </button>
+
+      {/* Dropdown menu */}
+      {isOpen && (
+        <div className="absolute z-50 left-0 right-0 mt-1 max-h-52 overflow-auto rounded-lg bg-white border border-border shadow-lg animate-dropdownOpen py-1">
+          {options.map((opt) => {
+            const isSelected = opt.value === value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => handleSelect(opt.value)}
+                className={`
+                  w-full flex items-center justify-between px-3 py-2 text-left text-sm
+                  transition-colors duration-100 cursor-pointer
+                  ${isSelected ? "bg-primary/5 text-primary font-medium" : "text-text-primary hover:bg-gray-50"}
+                `}
+              >
+                <span className="truncate">{opt.label}</span>
+                {isSelected && (
+                  <HiCheck className="w-4 h-4 text-primary flex-shrink-0 ml-2" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {error && <p className="mt-1 text-xs text-danger">{error}</p>}
     </div>
   );
 }

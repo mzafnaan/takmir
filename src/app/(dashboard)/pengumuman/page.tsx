@@ -250,11 +250,17 @@ export default function PengumumanPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={editingItem ? "Edit Pengumuman" : "Buat Pengumuman"}
+        subtitle={
+          editingItem
+            ? "Perbarui informasi pengumuman"
+            : "Isi data untuk membuat pengumuman baru"
+        }
         size="lg"
       >
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <Input
             label="Judul"
+            placeholder="Masukkan judul pengumuman"
             value={formData.judul}
             onChange={(e) => updateForm("judul", e.target.value)}
             required
@@ -264,7 +270,8 @@ export default function PengumumanPage() {
               Deskripsi
             </label>
             <textarea
-              className="w-full px-4 py-3 text-base rounded-xl border border-border bg-white text-text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 min-h-[120px] resize-y"
+              className="w-full px-4 py-3 text-base rounded-xl border border-border bg-white text-text-primary placeholder-text-secondary/70 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary focus:shadow-sm transition-all duration-200 min-h-[120px] resize-y"
+              placeholder="Tulis deskripsi pengumuman..."
               value={formData.deskripsi}
               onChange={(e) => updateForm("deskripsi", e.target.value)}
               required
@@ -286,7 +293,7 @@ export default function PengumumanPage() {
               required
             />
           </div>
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-3">
             <Button type="submit" fullWidth>
               {editingItem ? "Simpan Perubahan" : "Buat Pengumuman"}
             </Button>

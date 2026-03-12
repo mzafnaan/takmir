@@ -345,16 +345,23 @@ export default function InventarisPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={editingItem ? "Edit Barang" : "Tambah Barang"}
+        subtitle={
+          editingItem
+            ? "Perbarui informasi barang"
+            : "Isi data untuk menambahkan barang baru"
+        }
       >
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <Input
             label="Nama Barang"
+            placeholder="Masukkan nama barang"
             value={formData.namaBarang}
             onChange={(e) => update("namaBarang", e.target.value)}
             required
           />
           <Input
             label="Lokasi"
+            placeholder="Masukkan lokasi penyimpanan"
             value={formData.lokasi}
             onChange={(e) => update("lokasi", e.target.value)}
             required
@@ -392,7 +399,7 @@ export default function InventarisPage() {
             options={KONDISI_INVENTARIS.map((k) => ({ value: k, label: k }))}
             required
           />
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-3">
             <Button type="submit" fullWidth>
               {editingItem ? "Simpan" : "Tambah"}
             </Button>

@@ -259,8 +259,13 @@ export default function KeuanganPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={editingItem ? "Edit Transaksi" : "Catat Transaksi"}
+        subtitle={
+          editingItem
+            ? "Perbarui data transaksi"
+            : "Isi data untuk mencatat transaksi baru"
+        }
       >
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <Input
             label="Tanggal"
             type="date"
@@ -270,6 +275,7 @@ export default function KeuanganPage() {
           />
           <Input
             label="Keterangan"
+            placeholder="Masukkan keterangan transaksi"
             value={formData.keterangan}
             onChange={(e) => update("keterangan", e.target.value)}
             required
@@ -302,7 +308,7 @@ export default function KeuanganPage() {
             required
             min={0}
           />
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-3">
             <Button type="submit" fullWidth>
               {editingItem ? "Simpan" : "Catat"}
             </Button>
