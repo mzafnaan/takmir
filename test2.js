@@ -1,13 +1,15 @@
+/* eslint-disable */
+require('dotenv').config({ path: '.env.local' });
 const { initializeApp } = require('firebase/app');
 const { getFirestore, collection, getDocs } = require('firebase/firestore');
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBU57wvc0jbI1YQwbx4NzpWzk2OIhr2hIc",
-  authDomain: "takmirmasjid-f2864.firebaseapp.com",
-  projectId: "takmirmasjid-f2864",
-  storageBucket: "takmirmasjid-f2864.firebasestorage.app",
-  messagingSenderId: "284396758440",
-  appId: "1:284396758440:web:7ba95d8fa4d0032781e99d"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.GOOGLE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
 const app = initializeApp(firebaseConfig);
