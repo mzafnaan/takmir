@@ -11,108 +11,32 @@ import Select from "@/components/ui/Select";
 import { KONDISI_INVENTARIS } from "@/constants";
 import { formatDate } from "@/lib/utils";
 import type { AktivitasInventaris, Inventaris } from "@/types";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import {
   HiOutlineArchive,
   HiOutlineExclamation,
   HiOutlinePencil,
   HiOutlineSwitchHorizontal,
+  HiOutlineReply,
   HiOutlineTrash,
   HiPlus,
 } from "react-icons/hi";
-
-const demoItems: Inventaris[] = [
-  {
-    id: "1",
-    namaBarang: "Sajadah",
-    lokasi: "Gudang Utama",
-    total: 50,
-    tersedia: 45,
-    dipinjam: 5,
-    kondisi: "Baik",
-    createdAt: "2026-01-01",
-  },
-  {
-    id: "2",
-    namaBarang: "Sound System",
-    lokasi: "Ruang AV",
-    total: 2,
-    tersedia: 1,
-    dipinjam: 1,
-    kondisi: "Baik",
-    createdAt: "2026-01-01",
-  },
-  {
-    id: "3",
-    namaBarang: "Kipas Angin",
-    lokasi: "Masjid Utama",
-    total: 8,
-    tersedia: 6,
-    dipinjam: 0,
-    kondisi: "Perlu Perbaikan",
-    createdAt: "2026-01-15",
-  },
-  {
-    id: "4",
-    namaBarang: "Meja Lipat",
-    lokasi: "Gudang Utama",
-    total: 20,
-    tersedia: 15,
-    dipinjam: 5,
-    kondisi: "Baik",
-    createdAt: "2026-02-01",
-  },
-  {
-    id: "5",
-    namaBarang: "Kursi Plastik",
-    lokasi: "Gudang Samping",
-    total: 100,
-    tersedia: 80,
-    dipinjam: 20,
-    kondisi: "Baik",
-    createdAt: "2026-02-01",
-  },
-];
-
-const demoActivity: AktivitasInventaris[] = [
-  {
-    id: "1",
-    inventarisId: "5",
-    namaBarang: "Kursi Plastik",
-    aksi: "dipinjam",
-    jumlah: 20,
-    catatan: "Untuk acara pengajian",
-    tanggal: "2026-03-08",
-    oleh: "Pak Budi",
-  },
-  {
-    id: "2",
-    inventarisId: "2",
-    namaBarang: "Sound System",
-    aksi: "dipinjam",
-    jumlah: 1,
-    catatan: "Acara ceramah",
-    tanggal: "2026-03-07",
-    oleh: "Pak Andi",
-  },
-  {
-    id: "3",
-    inventarisId: "1",
-    namaBarang: "Sajadah",
-    aksi: "ditambah",
-    jumlah: 10,
-    catatan: "Pembelian baru",
-    tanggal: "2026-03-05",
-    oleh: "Bendahara",
-  },
-];
+import {
+  addAktivitasInventaris,
+  addInventaris,
+  deleteInventaris,
+  getAktivitasInventaris,
+  getInventaris,
+  updateInventaris,
+} from "@/features/inventaris/inventarisService";
 
 const emptyForm = {
   namaBarang: "",
   lokasi: "",
   total: 0,
   tersedia: 0,
-  dipinjam: 0,
+  dipinjam: "" as unknown as number,
   kondisi: "Baik",
   createdAt: new Date().toISOString().split("T")[0],
 };
@@ -128,11 +52,43 @@ const aksiBadge = (aksi: string) => {
 };
 
 export default function InventarisPage() {
-  const [items, setItems] = useState<Inventaris[]>(demoItems);
-  const [activities] = useState<AktivitasInventaris[]>(demoActivity);
+  const { userData } = useAuth();
+  const [items, setItems] = useState<Inventaris[]>([]);
+  const [activities, setActivities] = useState<AktivitasInventaris[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Main Form Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Inventaris | null>(null);
   const [formData, setFormData] = useState(emptyForm);
+
+  // Pinjam Modal state
+  const [isPinjamModalOpen, setIsPinjamModalOpen] = useState(false);
+  const [pinjamItem, setPinjamItem] = useState<Inventaris | null>(null);
+  const [pinjamForm, setPinjamForm] = useState({ jumlah: 1, peminjam: "", keterangan: "" });
+
+  // Kembali Modal state
+  const [isKembaliModalOpen, setIsKembaliModalOpen] = useState(false);
+  const [kembaliItem, setKembaliItem] = useState<Inventaris | null>(null);
+  const [kembaliForm, setKembaliForm] = useState({ jumlah: 1, keterangan: "" });
+
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const fetchedItems = await getInventaris();
+      const fetchedActivities = await getAktivitasInventaris();
+      setItems(fetchedItems);
+      setActivities(fetchedActivities);
+    } catch (error) {
+      console.error("Error fetching inventaris data", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const stats = useMemo(
     () => ({
@@ -150,37 +106,147 @@ export default function InventarisPage() {
     setFormData(emptyForm);
     setIsModalOpen(true);
   };
+
   const openEdit = (item: Inventaris) => {
     setEditingItem(item);
-    setFormData(item);
+    setFormData({
+      ...item,
+      dipinjam: item.dipinjam === 0 ? ("" as unknown as number) : item.dipinjam,
+    });
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const d = {
-      ...formData,
-      total: Number(formData.total),
-      tersedia: Number(formData.tersedia),
-      dipinjam: Number(formData.dipinjam),
-    };
-    if (editingItem)
-      setItems(
-        items.map((i) =>
-          i.id === editingItem.id
-            ? ({ ...d, id: editingItem.id } as Inventaris)
-            : i,
-        ),
-      );
-    else
-      setItems([...items, { ...d, id: Date.now().toString() } as Inventaris]);
-    setIsModalOpen(false);
+  const openPinjam = (item: Inventaris) => {
+    setPinjamItem(item);
+    setPinjamForm({ jumlah: 1, peminjam: "", keterangan: "" });
+    setIsPinjamModalOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm("Hapus barang ini?"))
-      setItems(items.filter((i) => i.id !== id));
+  const openKembali = (item: Inventaris) => {
+    setKembaliItem(item);
+    setKembaliForm({ jumlah: item.dipinjam > 0 ? 1 : 0, keterangan: "" });
+    setIsKembaliModalOpen(true);
   };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const d = {
+        ...formData,
+        total: Number(formData.total) || 0,
+        tersedia: Number(formData.tersedia) || 0,
+        dipinjam: formData.dipinjam ? Number(formData.dipinjam) : 0,
+      };
+
+      if (editingItem) {
+        await updateInventaris(editingItem.id, d);
+      } else {
+        await addInventaris(d);
+      }
+      setIsModalOpen(false);
+      fetchData();
+    } catch (error) {
+      console.error("Gagal menyimpan data:", error);
+      alert("Gagal menyimpan data inventaris.");
+    }
+  };
+
+  const handlePinjamSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pinjamItem) return;
+
+    try {
+      const jumlahPinjam = Number(pinjamForm.jumlah);
+
+      if (jumlahPinjam <= 0) {
+        alert("Jumlah pinjam harus lebih besar dari 0.");
+        return;
+      }
+
+      if (jumlahPinjam > pinjamItem.tersedia) {
+        alert("Jumlah yang dipinjam melebihi stok yang tersedia!");
+        return;
+      }
+
+      // Update the item quantity
+      await updateInventaris(pinjamItem.id, {
+        dipinjam: pinjamItem.dipinjam + jumlahPinjam,
+        tersedia: pinjamItem.tersedia - jumlahPinjam,
+      });
+
+      // Log the activity
+      await addAktivitasInventaris({
+        inventarisId: pinjamItem.id,
+        namaBarang: pinjamItem.namaBarang,
+        aksi: "dipinjam",
+        jumlah: jumlahPinjam,
+        catatan: pinjamForm.keterangan || "Tidak ada keterangan",
+        tanggal: new Date().toISOString(),
+        oleh: pinjamForm.peminjam || userData?.name || "Pengurus",
+      });
+
+      setIsPinjamModalOpen(false);
+      fetchData();
+    } catch (error) {
+      console.error("Gagal mencatat peminjaman:", error);
+      alert("Gagal mencatat peminjaman.");
+    }
+  };
+
+  const handleKembaliSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!kembaliItem) return;
+
+    try {
+      const jumlahKembali = Number(kembaliForm.jumlah);
+
+      if (jumlahKembali <= 0) {
+        alert("Jumlah yang dikembalikan harus lebih besar dari 0.");
+        return;
+      }
+
+      if (jumlahKembali > kembaliItem.dipinjam) {
+        alert("Jumlah melebihi total barang yang sedang dipinjam!");
+        return;
+      }
+
+      // Update the item quantity
+      await updateInventaris(kembaliItem.id, {
+        dipinjam: kembaliItem.dipinjam - jumlahKembali,
+        tersedia: kembaliItem.tersedia + jumlahKembali,
+      });
+
+      // Log the activity
+      await addAktivitasInventaris({
+        inventarisId: kembaliItem.id,
+        namaBarang: kembaliItem.namaBarang,
+        aksi: "dikembalikan",
+        jumlah: jumlahKembali,
+        catatan: kembaliForm.keterangan || "Dikembalikan",
+        tanggal: new Date().toISOString(),
+        oleh: userData?.name || "Pengurus",
+      });
+
+      setIsKembaliModalOpen(false);
+      fetchData();
+    } catch (error) {
+      console.error("Gagal mencatat pengembalian:", error);
+      alert("Gagal mencatat pengembalian.");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (confirm("Hapus barang ini secara permanen?")) {
+      try {
+        await deleteInventaris(id);
+        fetchData();
+      } catch (error) {
+        console.error("Gagal menghapus:", error);
+        alert("Gagal menghapus barang.");
+      }
+    }
+  };
+
   const update = (f: string, v: string | number) =>
     setFormData({ ...formData, [f]: v });
 
@@ -217,11 +283,15 @@ export default function InventarisPage() {
         />
       </div>
 
-      {items.length === 0 ? (
+      {isLoading ? (
+        <div className="flex justify-center items-center py-20">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+        </div>
+      ) : items.length === 0 ? (
         <EmptyState
           icon={<HiOutlineArchive className="w-8 h-8" />}
           title="Belum ada inventaris"
-          description="Tambah barang pertama"
+          description="Tambah barang pertama untuk mulai mengelola inventaris"
           action={
             <Button onClick={openAdd}>
               <HiPlus className="w-5 h-5" /> Tambah
@@ -257,7 +327,7 @@ export default function InventarisPage() {
                   <th className="px-4 py-3 text-sm font-semibold text-text-secondary">
                     Kondisi
                   </th>
-                  <th className="px-4 py-3"></th>
+                  <th className="px-4 py-3 text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody>
@@ -289,16 +359,36 @@ export default function InventarisPage() {
                       </Badge>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex gap-1">
+                      <div className="flex justify-end gap-1">
+                        {item.tersedia > 0 && (
+                          <button
+                            onClick={() => openPinjam(item)}
+                            title="Pinjam Barang"
+                            className="flex items-center justify-center p-1.5 rounded-lg hover:bg-warning/10 text-warning cursor-pointer transition-colors"
+                          >
+                            <HiOutlineSwitchHorizontal className="w-4 h-4" />
+                          </button>
+                        )}
+                        {item.dipinjam > 0 && (
+                          <button
+                            onClick={() => openKembali(item)}
+                            title="Kembalikan Barang"
+                            className="flex items-center justify-center p-1.5 rounded-lg hover:bg-success/10 text-success cursor-pointer transition-colors"
+                          >
+                            <HiOutlineReply className="w-4 h-4" />
+                          </button>
+                        )}
                         <button
                           onClick={() => openEdit(item)}
-                          className="p-1.5 rounded-lg hover:bg-blue-50 text-primary cursor-pointer"
+                          title="Edit Barang"
+                          className="flex items-center justify-center p-1.5 rounded-lg hover:bg-blue-50 text-primary cursor-pointer transition-colors"
                         >
                           <HiOutlinePencil className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDelete(item.id)}
-                          className="p-1.5 rounded-lg hover:bg-red-50 text-danger cursor-pointer"
+                          title="Hapus Barang"
+                          className="flex items-center justify-center p-1.5 rounded-lg hover:bg-red-50 text-danger cursor-pointer transition-colors"
                         >
                           <HiOutlineTrash className="w-4 h-4" />
                         </button>
@@ -313,34 +403,37 @@ export default function InventarisPage() {
       )}
 
       {/* Activity History */}
-      <div className="bg-card rounded-xl shadow-sm border border-border p-5">
-        <h2 className="text-lg font-bold text-text-primary mb-4">
-          Riwayat Aktivitas
-        </h2>
-        <div className="space-y-3">
-          {activities.map((a) => (
-            <div
-              key={a.id}
-              className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50"
-            >
-              <div className="mt-0.5">{aksiBadge(a.aksi)}</div>
-              <div className="flex-1">
-                <p className="font-medium text-text-primary">
-                  {a.namaBarang}{" "}
-                  <span className="text-text-secondary font-normal">
-                    × {a.jumlah}
-                  </span>
-                </p>
-                <p className="text-sm text-text-secondary">{a.catatan}</p>
-                <p className="text-xs text-text-secondary mt-1">
-                  {formatDate(a.tanggal)} • {a.oleh}
-                </p>
+      {!isLoading && activities.length > 0 && (
+        <div className="bg-card rounded-xl shadow-sm border border-border p-5">
+          <h2 className="text-lg font-bold text-text-primary mb-4">
+            Riwayat Aktivitas
+          </h2>
+          <div className="space-y-3">
+            {activities.map((a) => (
+              <div
+                key={a.id}
+                className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors"
+              >
+                <div className="mt-0.5">{aksiBadge(a.aksi)}</div>
+                <div className="flex-1">
+                  <p className="font-medium text-text-primary">
+                    {a.namaBarang}{" "}
+                    <span className="text-text-secondary font-normal">
+                      × {a.jumlah}
+                    </span>
+                  </p>
+                  <p className="text-sm text-text-secondary">{a.catatan}</p>
+                  <p className="text-xs text-text-secondary mt-1">
+                    {formatDate(a.tanggal)} • {a.oleh}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
+      {/* Modal Utama (Tambah/Edit) */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -370,7 +463,7 @@ export default function InventarisPage() {
             <Input
               label="Total"
               type="number"
-              value={formData.total || ""}
+              value={formData.total === 0 ? "" : formData.total}
               onChange={(e) => update("total", Number(e.target.value))}
               required
               min={0}
@@ -378,17 +471,16 @@ export default function InventarisPage() {
             <Input
               label="Tersedia"
               type="number"
-              value={formData.tersedia || ""}
+              value={formData.tersedia === 0 ? "" : formData.tersedia}
               onChange={(e) => update("tersedia", Number(e.target.value))}
               required
               min={0}
             />
             <Input
-              label="Dipinjam"
+              label="Dipinjam (Opsional)"
               type="number"
-              value={formData.dipinjam || ""}
-              onChange={(e) => update("dipinjam", Number(e.target.value))}
-              required
+              value={formData.dipinjam}
+              onChange={(e) => update("dipinjam", e.target.value)}
               min={0}
             />
           </div>
@@ -407,6 +499,119 @@ export default function InventarisPage() {
               type="button"
               variant="ghost"
               onClick={() => setIsModalOpen(false)}
+            >
+              Batal
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal Pinjam Barang */}
+      <Modal
+        isOpen={isPinjamModalOpen}
+        onClose={() => setIsPinjamModalOpen(false)}
+        title="Pinjam Barang"
+        subtitle={`Catat peminjaman untuk ${pinjamItem?.namaBarang || ""}`}
+      >
+        <form onSubmit={handlePinjamSubmit} className="space-y-5">
+          <div className="bg-gray-50 p-3 rounded-lg flex justify-between text-sm">
+            <span className="text-text-secondary">Stok Tersedia:</span>
+            <span className="font-bold text-success">
+              {pinjamItem?.tersedia || 0}
+            </span>
+          </div>
+          
+          <Input
+            label="Jumlah Pinjam"
+            type="number"
+            value={pinjamForm.jumlah}
+            onChange={(e) =>
+              setPinjamForm({ ...pinjamForm, jumlah: Number(e.target.value) })
+            }
+            required
+            min={1}
+            max={pinjamItem?.tersedia || 1}
+          />
+          
+          <Input
+            label="Nama Peminjam"
+            placeholder="Contoh: Pak Budi"
+            value={pinjamForm.peminjam}
+            onChange={(e) =>
+              setPinjamForm({ ...pinjamForm, peminjam: e.target.value })
+            }
+            required
+          />
+          
+          <Input
+            label="Keterangan / Keperluan"
+            placeholder="Contoh: Dipinjam untuk acara kajian"
+            value={pinjamForm.keterangan}
+            onChange={(e) =>
+              setPinjamForm({ ...pinjamForm, keterangan: e.target.value })
+            }
+            required
+          />
+
+          <div className="flex gap-3 pt-3">
+            <Button type="submit" fullWidth>
+              Konfirmasi Pinjam
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setIsPinjamModalOpen(false)}
+            >
+              Batal
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal Mengembalikan Barang */}
+      <Modal
+        isOpen={isKembaliModalOpen}
+        onClose={() => setIsKembaliModalOpen(false)}
+        title="Kembalikan Barang"
+        subtitle={`Catat pengembalian untuk ${kembaliItem?.namaBarang || ""}`}
+      >
+        <form onSubmit={handleKembaliSubmit} className="space-y-5">
+          <div className="bg-gray-50 p-3 rounded-lg flex justify-between text-sm">
+            <span className="text-text-secondary">Sedang Dipinjam:</span>
+            <span className="font-bold text-warning">
+              {kembaliItem?.dipinjam || 0}
+            </span>
+          </div>
+          
+          <Input
+            label="Jumlah Dikembalikan"
+            type="number"
+            value={kembaliForm.jumlah}
+            onChange={(e) =>
+              setKembaliForm({ ...kembaliForm, jumlah: Number(e.target.value) })
+            }
+            required
+            min={1}
+            max={kembaliItem?.dipinjam || 1}
+          />
+          
+          <Input
+            label="Keterangan / Kondisi (Opsional)"
+            placeholder="Contoh: Dikembalikan dalam keadaan baik"
+            value={kembaliForm.keterangan}
+            onChange={(e) =>
+              setKembaliForm({ ...kembaliForm, keterangan: e.target.value })
+            }
+          />
+
+          <div className="flex gap-3 pt-3">
+            <Button type="submit" fullWidth>
+              Konfirmasi Kembali
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setIsKembaliModalOpen(false)}
             >
               Batal
             </Button>
