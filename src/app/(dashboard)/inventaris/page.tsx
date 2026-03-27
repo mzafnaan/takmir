@@ -10,9 +10,11 @@ import Modal from "@/components/ui/Modal";
 import Select from "@/components/ui/Select";
 import { KONDISI_INVENTARIS } from "@/constants";
 import { formatDate } from "@/lib/utils";
-import type { AktivitasInventaris, Inventaris } from "@/types";
-import React, { useEffect, useMemo, useState } from "react";
+import type { Inventaris } from "@/types";
+import React, { useMemo, useState } from "react";
+import useSWR from "swr";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermission } from "@/hooks/usePermission";
 import {
   HiOutlineArchive,
   HiOutlineExclamation,
@@ -53,9 +55,11 @@ const aksiBadge = (aksi: string) => {
 
 export default function InventarisPage() {
   const { userData } = useAuth();
-  const [items, setItems] = useState<Inventaris[]>([]);
-  const [activities, setActivities] = useState<AktivitasInventaris[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { canEdit } = usePermission();
+  
+  const { data: items = [], mutate: mutateItems, isLoading: itemsLoading } = useSWR("inventaris", getInventaris);
+  const { data: activities = [], mutate: mutateActivities, isLoading: activitiesLoading } = useSWR("aktivitas_inventaris", getAktivitasInventaris);
+  const isLoading = itemsLoading || activitiesLoading;
 
   // Main Form Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -71,24 +75,6 @@ export default function InventarisPage() {
   const [isKembaliModalOpen, setIsKembaliModalOpen] = useState(false);
   const [kembaliItem, setKembaliItem] = useState<Inventaris | null>(null);
   const [kembaliForm, setKembaliForm] = useState({ jumlah: 1, keterangan: "" });
-
-  const fetchData = async () => {
-    setIsLoading(true);
-    try {
-      const fetchedItems = await getInventaris();
-      const fetchedActivities = await getAktivitasInventaris();
-      setItems(fetchedItems);
-      setActivities(fetchedActivities);
-    } catch (error) {
-      console.error("Error fetching inventaris data", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
 
   const stats = useMemo(
     () => ({
@@ -144,7 +130,8 @@ export default function InventarisPage() {
         await addInventaris(d);
       }
       setIsModalOpen(false);
-      fetchData();
+      mutateItems();
+      mutateActivities();
     } catch (error) {
       console.error("Gagal menyimpan data:", error);
       alert("Gagal menyimpan data inventaris.");
@@ -186,7 +173,8 @@ export default function InventarisPage() {
       });
 
       setIsPinjamModalOpen(false);
-      fetchData();
+      mutateItems();
+      mutateActivities();
     } catch (error) {
       console.error("Gagal mencatat peminjaman:", error);
       alert("Gagal mencatat peminjaman.");
@@ -228,7 +216,8 @@ export default function InventarisPage() {
       });
 
       setIsKembaliModalOpen(false);
-      fetchData();
+      mutateItems();
+      mutateActivities();
     } catch (error) {
       console.error("Gagal mencatat pengembalian:", error);
       alert("Gagal mencatat pengembalian.");
@@ -239,7 +228,7 @@ export default function InventarisPage() {
     if (confirm("Hapus barang ini secara permanen?")) {
       try {
         await deleteInventaris(id);
-        fetchData();
+        mutateItems();
       } catch (error) {
         console.error("Gagal menghapus:", error);
         alert("Gagal menghapus barang.");
@@ -256,9 +245,11 @@ export default function InventarisPage() {
         title="Inventaris"
         subtitle="Kelola aset masjid"
         action={
-          <Button onClick={openAdd}>
-            <HiPlus className="w-5 h-5" /> Tambah Barang
-          </Button>
+          canEdit ? (
+            <Button onClick={openAdd}>
+              <HiPlus className="w-5 h-5" /> Tambah Barang
+            </Button>
+          ) : undefined
         }
       />
 
@@ -293,9 +284,11 @@ export default function InventarisPage() {
           title="Belum ada inventaris"
           description="Tambah barang pertama untuk mulai mengelola inventaris"
           action={
-            <Button onClick={openAdd}>
-              <HiPlus className="w-5 h-5" /> Tambah
-            </Button>
+          canEdit ? (
+              <Button onClick={openAdd}>
+                <HiPlus className="w-5 h-5" /> Tambah
+              </Button>
+            ) : undefined
           }
         />
       ) : (
@@ -327,7 +320,7 @@ export default function InventarisPage() {
                   <th className="px-4 py-3 text-sm font-semibold text-text-secondary">
                     Kondisi
                   </th>
-                  <th className="px-4 py-3 text-right">Aksi</th>
+                  {canEdit && <th className="px-4 py-3 text-right">Aksi</th>}
                 </tr>
               </thead>
               <tbody>
@@ -358,6 +351,7 @@ export default function InventarisPage() {
                         {item.kondisi}
                       </Badge>
                     </td>
+                    {canEdit && (
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-1">
                         {item.tersedia > 0 && (
@@ -394,6 +388,7 @@ export default function InventarisPage() {
                         </button>
                       </div>
                     </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

@@ -11,6 +11,15 @@ import { KATEGORI_PENGUMUMAN, URGENSI_PENGUMUMAN } from "@/constants";
 import { formatDate } from "@/lib/utils";
 import type { Pengumuman } from "@/types";
 import React, { useMemo, useState } from "react";
+import useSWR from "swr";
+import { useAuth } from "@/hooks/useAuth";
+import { usePermission } from "@/hooks/usePermission";
+import {
+  getPengumuman,
+  addPengumuman,
+  updatePengumuman,
+  deletePengumuman,
+} from "@/features/pengumuman/pengumumanService";
 import {
   HiOutlinePencil,
   HiOutlineSearch,
@@ -19,48 +28,7 @@ import {
   HiPlus,
 } from "react-icons/hi";
 
-const demoPengumuman: Pengumuman[] = [
-  {
-    id: "1",
-    judul: "Jadwal Imam Sholat Jumat Bulan Maret",
-    deskripsi:
-      "Berikut jadwal imam sholat jumat untuk bulan Maret 2026. Mohon setiap imam yang berhalangan untuk segera mengkonfirmasi agar bisa dicarikan pengganti.",
-    kategori: "Informasi Umum",
-    urgensi: "Informasi",
-    createdBy: "admin",
-    createdAt: "2026-03-01",
-  },
-  {
-    id: "2",
-    judul: "Tagihan Listrik & Air Meningkat",
-    deskripsi:
-      "Tagihan listrik dan air bulan ini meningkat. Mohon bendahara segera memproses pembayaran sebelum jatuh tempo tanggal 15 Maret.",
-    kategori: "Keuangan",
-    urgensi: "Penting",
-    createdBy: "admin",
-    createdAt: "2026-03-05",
-  },
-  {
-    id: "3",
-    judul: "Pendaftaran Panitia Ramadhan 2026",
-    deskripsi:
-      "Dibuka pendaftaran panitia Ramadhan 2026. Segera daftarkan diri Anda paling lambat 15 Maret. Form pendaftaran tersedia di ruang sekretariat.",
-    kategori: "Kegiatan",
-    urgensi: "Mendesak",
-    createdBy: "admin",
-    createdAt: "2026-03-08",
-  },
-  {
-    id: "4",
-    judul: "Persiapan Kerja Bakti Bulanan",
-    deskripsi:
-      "Kerja bakti bulanan akan dilaksanakan hari Minggu, 20 Maret 2026. Mohon semua pengurus hadir tepat waktu pukul 07.00.",
-    kategori: "Kerja Bakti",
-    urgensi: "Penting",
-    createdBy: "admin",
-    createdAt: "2026-03-07",
-  },
-];
+// removed dummy data
 
 const urgensiBadgeVariant = (urgensi: string) => {
   switch (urgensi) {
@@ -83,7 +51,10 @@ const emptyPengumuman: Omit<Pengumuman, "id"> = {
 };
 
 export default function PengumumanPage() {
-  const [pengumuman, setPengumuman] = useState<Pengumuman[]>(demoPengumuman);
+  const { userData } = useAuth();
+  const { canEdit } = usePermission();
+  const { data: pengumuman = [], mutate, isLoading } = useSWR("pengumuman", getPengumuman);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Pengumuman | null>(null);
   const [formData, setFormData] = useState(emptyPengumuman);
@@ -117,32 +88,35 @@ export default function PengumumanPage() {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingItem) {
-      setPengumuman(
-        pengumuman.map((p) =>
-          p.id === editingItem.id
-            ? ({ ...formData, id: editingItem.id } as Pengumuman)
-            : p,
-        ),
-      );
-    } else {
-      setPengumuman([
-        {
+    try {
+      if (editingItem) {
+        await updatePengumuman(editingItem.id, formData);
+      } else {
+        await addPengumuman({
           ...formData,
-          id: Date.now().toString(),
           createdAt: new Date().toISOString().split("T")[0],
-        } as Pengumuman,
-        ...pengumuman,
-      ]);
+          createdBy: userData?.name || "Admin",
+        });
+      }
+      setIsModalOpen(false);
+      mutate();
+    } catch (error) {
+      console.error("Gagal menyimpan pengumuman:", error);
+      alert("Gagal menyimpan pengumuman.");
     }
-    setIsModalOpen(false);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm("Yakin ingin menghapus pengumuman ini?")) {
-      setPengumuman(pengumuman.filter((p) => p.id !== id));
+      try {
+        await deletePengumuman(id);
+        mutate();
+      } catch (error) {
+        console.error("Gagal menghapus:", error);
+        alert("Gagal menghapus pengumuman.");
+      }
     }
   };
 
@@ -156,9 +130,11 @@ export default function PengumumanPage() {
         title="Pengumuman"
         subtitle="Kelola pengumuman untuk pengurus masjid"
         action={
-          <Button onClick={openAddModal}>
-            <HiPlus className="w-5 h-5" /> Buat Pengumuman
-          </Button>
+          canEdit ? (
+            <Button onClick={openAddModal}>
+              <HiPlus className="w-5 h-5" /> Buat Pengumuman
+            </Button>
+          ) : undefined
         }
       />
 
@@ -191,15 +167,21 @@ export default function PengumumanPage() {
       </div>
 
       {/* Pengumuman Grid */}
-      {filtered.length === 0 ? (
+      {isLoading ? (
+        <div className="flex justify-center items-center py-20">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+        </div>
+      ) : filtered.length === 0 ? (
         <EmptyState
           icon={<HiOutlineSpeakerphone className="w-8 h-8" />}
           title="Belum ada pengumuman"
           description="Buat pengumuman pertama untuk pengurus masjid"
           action={
-            <Button onClick={openAddModal}>
-              <HiPlus className="w-5 h-5" /> Buat Pengumuman
-            </Button>
+            canEdit ? (
+              <Button onClick={openAddModal}>
+                <HiPlus className="w-5 h-5" /> Buat Pengumuman
+              </Button>
+            ) : undefined
           }
         />
       ) : (
@@ -213,6 +195,7 @@ export default function PengumumanPage() {
                 <Badge variant={urgensiBadgeVariant(item.urgensi)}>
                   {item.urgensi}
                 </Badge>
+                {canEdit && (
                 <div className="flex gap-1">
                   <button
                     onClick={() => openEditModal(item)}
@@ -227,6 +210,7 @@ export default function PengumumanPage() {
                     <HiOutlineTrash className="w-4 h-4" />
                   </button>
                 </div>
+                )}
               </div>
               <h3 className="text-base font-bold text-text-primary mb-2">
                 {item.judul}

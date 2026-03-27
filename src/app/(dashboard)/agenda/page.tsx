@@ -10,6 +10,7 @@ import Select from "@/components/ui/Select";
 import { JENIS_KEGIATAN } from "@/constants";
 import type { Agenda } from "@/types";
 import React, { useMemo, useState } from "react";
+import { usePermission } from "@/hooks/usePermission";
 import {
   HiOutlineCalendar,
   HiOutlinePencil,
@@ -100,6 +101,7 @@ const emptyAgenda: Omit<Agenda, "id"> = {
 };
 
 export default function AgendaPage() {
+  const { canEdit } = usePermission();
   const [agendas, setAgendas] = useState<Agenda[]>(demoAgendas);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAgenda, setEditingAgenda] = useState<Agenda | null>(null);
@@ -165,9 +167,11 @@ export default function AgendaPage() {
         title="Agenda Kegiatan"
         subtitle="Kelola jadwal kegiatan masjid"
         action={
-          <Button onClick={openAddModal}>
-            <HiPlus className="w-5 h-5" /> Tambah Agenda
-          </Button>
+          canEdit ? (
+            <Button onClick={openAddModal}>
+              <HiPlus className="w-5 h-5" /> Tambah Agenda
+            </Button>
+          ) : undefined
         }
       />
 
@@ -248,9 +252,11 @@ export default function AgendaPage() {
           title="Belum ada agenda"
           description="Tambah agenda kegiatan masjid pertama Anda"
           action={
-            <Button onClick={openAddModal}>
-              <HiPlus className="w-5 h-5" /> Tambah Agenda
-            </Button>
+            canEdit ? (
+              <Button onClick={openAddModal}>
+                <HiPlus className="w-5 h-5" /> Tambah Agenda
+              </Button>
+            ) : undefined
           }
         />
       ) : (
@@ -285,6 +291,7 @@ export default function AgendaPage() {
                         </h3>
                         <Badge variant="info">{agenda.jenisKegiatan}</Badge>
                       </div>
+                      {canEdit && (
                       <div className="flex gap-1 shrink-0">
                         <button
                           onClick={() => openEditModal(agenda)}
@@ -299,6 +306,7 @@ export default function AgendaPage() {
                           <HiOutlineTrash className="w-4 h-4" />
                         </button>
                       </div>
+                      )}
                     </div>
                     <div className="space-y-1 text-sm text-text-secondary">
                       <p>🕐 {agenda.waktuMulai} - {agenda.waktuSelesai}</p>

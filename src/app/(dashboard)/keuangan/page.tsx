@@ -11,6 +11,15 @@ import { KATEGORI_PEMASUKAN, KATEGORI_PENGELUARAN } from "@/constants";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Transaksi } from "@/types";
 import React, { useMemo, useState } from "react";
+import useSWR from "swr";
+import { useAuth } from "@/hooks/useAuth";
+import { usePermission } from "@/hooks/usePermission";
+import {
+  getTransaksi,
+  addTransaksi,
+  updateTransaksi,
+  deleteTransaksi,
+} from "@/features/keuangan/keuanganService";
 import {
   HiOutlineCash,
   HiOutlinePencil,
@@ -20,63 +29,7 @@ import {
   HiPlus,
 } from "react-icons/hi";
 
-const demoTransaksi: Transaksi[] = [
-  {
-    id: "1",
-    tanggal: "2026-03-01",
-    keterangan: "Infak Jumat Minggu 1",
-    jenis: "pemasukan",
-    kategori: "Infak",
-    nominal: 2500000,
-    createdBy: "admin",
-  },
-  {
-    id: "2",
-    tanggal: "2026-03-03",
-    keterangan: "Bayar Listrik Masjid",
-    jenis: "pengeluaran",
-    kategori: "Listrik",
-    nominal: 850000,
-    createdBy: "admin",
-  },
-  {
-    id: "3",
-    tanggal: "2026-03-05",
-    keterangan: "Donasi Hamba Allah",
-    jenis: "pemasukan",
-    kategori: "Donasi",
-    nominal: 5000000,
-    createdBy: "admin",
-  },
-  {
-    id: "4",
-    tanggal: "2026-03-06",
-    keterangan: "Bayar Air PDAM",
-    jenis: "pengeluaran",
-    kategori: "Air",
-    nominal: 350000,
-    createdBy: "admin",
-  },
-  {
-    id: "5",
-    tanggal: "2026-03-08",
-    keterangan: "Infak Jumat Minggu 2",
-    jenis: "pemasukan",
-    kategori: "Infak",
-    nominal: 2750000,
-    createdBy: "admin",
-  },
-  {
-    id: "6",
-    tanggal: "2026-03-08",
-    keterangan: "Perbaikan Kipas Angin",
-    jenis: "pengeluaran",
-    kategori: "Perawatan",
-    nominal: 450000,
-    createdBy: "admin",
-  },
-];
-
+// dummy data removed
 type TransaksiForm = Omit<Transaksi, "id">;
 
 const emptyForm: TransaksiForm = {
@@ -89,7 +42,9 @@ const emptyForm: TransaksiForm = {
 };
 
 export default function KeuanganPage() {
-  const [transaksi, setTransaksi] = useState<Transaksi[]>(demoTransaksi);
+  const { userData } = useAuth();
+  const { canEdit } = usePermission();
+  const { data: transaksi = [], mutate, isLoading } = useSWR("transaksi", getTransaksi);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Transaksi | null>(null);
   const [formData, setFormData] = useState(emptyForm);
@@ -117,28 +72,36 @@ export default function KeuanganPage() {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const d = { ...formData, nominal: Number(formData.nominal) };
-    if (editingItem)
-      setTransaksi(
-        transaksi.map((t) =>
-          t.id === editingItem.id
-            ? ({ ...d, id: editingItem.id } as Transaksi)
-            : t,
-        ),
-      );
-    else
-      setTransaksi([
-        { ...d, id: Date.now().toString() } as Transaksi,
-        ...transaksi,
-      ]);
-    setIsModalOpen(false);
+    try {
+      const d = { ...formData, nominal: Number(formData.nominal) };
+      if (editingItem) {
+        await updateTransaksi(editingItem.id, d);
+      } else {
+        await addTransaksi({
+          ...d,
+          createdBy: userData?.name || "Admin",
+        });
+      }
+      setIsModalOpen(false);
+      mutate();
+    } catch (error) {
+      console.error("Gagal menyimpan transaksi:", error);
+      alert("Gagal menyimpan transaksi.");
+    }
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm("Hapus transaksi?"))
-      setTransaksi(transaksi.filter((t) => t.id !== id));
+  const handleDelete = async (id: string) => {
+    if (confirm("Hapus transaksi?")) {
+      try {
+        await deleteTransaksi(id);
+        mutate();
+      } catch (error) {
+        console.error("Gagal menghapus transaksi:", error);
+        alert("Gagal menghapus transaksi.");
+      }
+    }
   };
   const update = (f: string, v: string | number) =>
     setFormData({ ...formData, [f]: v });
@@ -151,9 +114,11 @@ export default function KeuanganPage() {
         title="Keuangan"
         subtitle="Kelola kas masjid"
         action={
-          <Button onClick={openAdd}>
-            <HiPlus className="w-5 h-5" /> Catat Transaksi
-          </Button>
+          canEdit ? (
+            <Button onClick={openAdd}>
+              <HiPlus className="w-5 h-5" /> Catat Transaksi
+            </Button>
+          ) : undefined
         }
       />
 
@@ -203,11 +168,26 @@ export default function KeuanganPage() {
                 <th className="px-4 py-3 text-sm font-semibold text-text-secondary text-right">
                   Nominal
                 </th>
-                <th className="px-4 py-3 text-sm font-semibold text-text-secondary"></th>
+                {canEdit && <th className="px-4 py-3 text-sm font-semibold text-text-secondary"></th>}
               </tr>
             </thead>
             <tbody>
-              {transaksi.map((t) => (
+              {isLoading && transaksi.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-8 text-center text-text-secondary">
+                    <div className="flex justify-center items-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    </div>
+                  </td>
+                </tr>
+              ) : Object.keys(transaksi).length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-8 text-center text-text-secondary">
+                    Belum ada transaksi
+                  </td>
+                </tr>
+              ) : (
+                transaksi.map((t) => (
                 <tr
                   key={t.id}
                   className="border-b border-border hover:bg-gray-50"
@@ -232,6 +212,7 @@ export default function KeuanganPage() {
                     {t.jenis === "pemasukan" ? "+" : "-"}
                     {formatCurrency(t.nominal)}
                   </td>
+                  {canEdit && (
                   <td className="px-4 py-3">
                     <div className="flex gap-1">
                       <button
@@ -248,8 +229,9 @@ export default function KeuanganPage() {
                       </button>
                     </div>
                   </td>
+                  )}
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>

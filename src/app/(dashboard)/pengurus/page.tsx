@@ -17,6 +17,7 @@ import {
 import { formatDate } from "@/lib/utils";
 import type { User, UserFormData } from "@/types";
 import React, { useCallback, useEffect, useState } from "react";
+import { usePermission } from "@/hooks/usePermission";
 import {
   HiOutlineLockClosed,
   HiOutlineMail,
@@ -48,6 +49,7 @@ const emptyForm: UserFormData = {
 
 export default function PengurusPage() {
   const [users, setUsers] = useState<User[]>([]);
+  const { canEdit } = usePermission();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -175,9 +177,11 @@ export default function PengurusPage() {
         title="Pengurus"
         subtitle="Kelola data pengurus masjid"
         action={
-          <Button onClick={openAdd}>
-            <HiPlus className="w-5 h-5" /> Tambah Pengurus
-          </Button>
+          canEdit ? (
+            <Button onClick={openAdd}>
+              <HiPlus className="w-5 h-5" /> Tambah Pengurus
+            </Button>
+          ) : undefined
         }
       />
 
@@ -218,9 +222,11 @@ export default function PengurusPage() {
           title="Belum ada data pengurus"
           description="Tambah pengurus pertama untuk mulai mengelola tim masjid"
           action={
-            <Button onClick={openAdd}>
-              <HiPlus className="w-5 h-5" /> Tambah Pengurus
-            </Button>
+          canEdit ? (
+              <Button onClick={openAdd}>
+                <HiPlus className="w-5 h-5" /> Tambah Pengurus
+              </Button>
+            ) : undefined
           }
         />
       ) : (
@@ -236,6 +242,7 @@ export default function PengurusPage() {
                     {user.name.charAt(0)}
                   </span>
                 </div>
+                {canEdit && (
                 <div className="flex gap-1">
                   <button
                     onClick={() => openEdit(user)}
@@ -250,6 +257,7 @@ export default function PengurusPage() {
                     <HiOutlineTrash className="w-4 h-4" />
                   </button>
                 </div>
+                )}
               </div>
               <h3 className="text-lg font-bold text-text-primary">
                 {user.name}
