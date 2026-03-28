@@ -53,9 +53,11 @@ export default function KeuanganPage() {
     let pemasukan = 0,
       pengeluaran = 0;
     transaksi.forEach((t) => {
-      t.jenis === "pemasukan"
-        ? (pemasukan += t.nominal)
-        : (pengeluaran += t.nominal);
+      if (t.jenis === "pemasukan") {
+        pemasukan += t.nominal;
+      } else {
+        pengeluaran += t.nominal;
+      }
     });
     return { saldo: pemasukan - pengeluaran, pemasukan, pengeluaran };
   }, [transaksi]);
@@ -67,7 +69,8 @@ export default function KeuanganPage() {
   };
   const openEdit = (t: Transaksi) => {
     setEditingItem(t);
-    const { id: _id, ...rest } = t;
+    const { id: _, ...rest } = t;
+    void _;
     setFormData(rest);
     setIsModalOpen(true);
   };

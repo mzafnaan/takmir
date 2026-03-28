@@ -94,11 +94,12 @@ export default function DashboardPage() {
                   key={agenda.id}
                   className="flex items-start gap-4 p-4 rounded-xl border border-gray-100 bg-white hover:border-primary/30 hover:shadow-sm transition-all"
                 >
-                  <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-blue-50 flex flex-col items-center justify-center">
-                    <span className="text-xs font-bold text-primary">
+                  <div className="flex-shrink-0 w-14 h-14 rounded-xl overflow-hidden relative bg-gradient-to-b from-primary/15 to-primary/5 flex flex-col items-center justify-center">
+                    <div className="absolute top-0 left-0 right-0 h-[3px] bg-primary rounded-t-xl" />
+                    <span className="text-base font-extrabold text-primary leading-none mt-0.5">
                       {new Date(agenda.tanggal).getDate()}
                     </span>
-                    <span className="text-xs text-primary">
+                    <span className="text-[10px] font-medium text-primary/60">
                       {new Date(agenda.tanggal).toLocaleDateString("id-ID", {
                         month: "short",
                       })}

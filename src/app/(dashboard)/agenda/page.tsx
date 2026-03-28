@@ -10,12 +10,22 @@ import Select from "@/components/ui/Select";
 import { JENIS_KEGIATAN } from "@/constants";
 import type { Agenda } from "@/types";
 import React, { useMemo, useState } from "react";
+import useSWR from "swr";
+import { useAuth } from "@/hooks/useAuth";
+import {
+  getAgendas,
+  addAgenda,
+  updateAgenda,
+  deleteAgenda,
+} from "@/features/agenda/agendaService";
 import { usePermission } from "@/hooks/usePermission";
 import {
   HiOutlineCalendar,
   HiOutlinePencil,
   HiOutlineTrash,
   HiPlus,
+  HiChevronLeft,
+  HiChevronRight,
 } from "react-icons/hi";
 
 const BULAN_PENDEK = [
@@ -23,9 +33,16 @@ const BULAN_PENDEK = [
   "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
 ];
 
+const BULAN_PANJANG = [
+  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+  "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+];
+
 const HARI = [
   "Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu",
 ];
+
+const HARI_SINGKAT = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
 
 function parseDateParts(dateStr: string) {
   const d = new Date(dateStr);
@@ -37,56 +54,7 @@ function parseDateParts(dateStr: string) {
   };
 }
 
-const demoAgendas: Agenda[] = [
-  {
-    id: "1",
-    judul: "Kajian Rutin Ba'da Maghrib",
-    jenisKegiatan: "Kajian",
-    tanggal: "2026-03-12",
-    waktuMulai: "18:30",
-    waktuSelesai: "20:00",
-    pemateri: "Ustadz Ahmad",
-    lokasi: "Masjid Utama",
-    deskripsi: "Kajian kitab fiqih untuk jamaah",
-    createdBy: "admin",
-  },
-  {
-    id: "2",
-    judul: "Rapat Bulanan Takmir",
-    jenisKegiatan: "Rapat Takmir",
-    tanggal: "2026-03-15",
-    waktuMulai: "19:30",
-    waktuSelesai: "21:00",
-    pemateri: "-",
-    lokasi: "Ruang Rapat",
-    deskripsi: "Evaluasi kegiatan dan rencana bulan depan",
-    createdBy: "admin",
-  },
-  {
-    id: "3",
-    judul: "Kerja Bakti Masjid",
-    jenisKegiatan: "Kerja Bakti",
-    tanggal: "2026-03-20",
-    waktuMulai: "07:00",
-    waktuSelesai: "11:00",
-    pemateri: "-",
-    lokasi: "Area Masjid",
-    deskripsi: "Bersih-bersih dan perawatan masjid",
-    createdBy: "admin",
-  },
-  {
-    id: "4",
-    judul: "Santunan Anak Yatim",
-    jenisKegiatan: "Santunan",
-    tanggal: "2026-03-25",
-    waktuMulai: "09:00",
-    waktuSelesai: "12:00",
-    pemateri: "-",
-    lokasi: "Aula Masjid",
-    deskripsi: "Pembagian santunan untuk anak yatim",
-    createdBy: "admin",
-  },
-];
+
 
 const emptyAgenda: Omit<Agenda, "id"> = {
   judul: "",
@@ -101,14 +69,17 @@ const emptyAgenda: Omit<Agenda, "id"> = {
 };
 
 export default function AgendaPage() {
+  const { userData } = useAuth();
   const { canEdit } = usePermission();
-  const [agendas, setAgendas] = useState<Agenda[]>(demoAgendas);
+  const { data: agendas = [], mutate, isLoading } = useSWR("agendas", getAgendas);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAgenda, setEditingAgenda] = useState<Agenda | null>(null);
   const [formData, setFormData] = useState(emptyAgenda);
   const [filterJenis, setFilterJenis] = useState("");
   const [filterDate, setFilterDate] = useState("");
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [calMonth, setCalMonth] = useState(new Date().getMonth());
+  const [calYear, setCalYear] = useState(new Date().getFullYear());
 
   const filteredAgendas = useMemo(() => {
     return agendas.filter((a) => {
@@ -130,28 +101,34 @@ export default function AgendaPage() {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingAgenda) {
-      setAgendas(
-        agendas.map((a) =>
-          a.id === editingAgenda.id
-            ? ({ ...formData, id: editingAgenda.id } as Agenda)
-            : a,
-        ),
-      );
-    } else {
-      setAgendas([
-        ...agendas,
-        { ...formData, id: Date.now().toString() } as Agenda,
-      ]);
+    try {
+      if (editingAgenda) {
+        await updateAgenda(editingAgenda.id, formData);
+      } else {
+        await addAgenda({
+          ...formData,
+          createdBy: userData?.name || "Admin",
+        });
+      }
+      setIsModalOpen(false);
+      mutate();
+    } catch (error) {
+      console.error("Gagal menyimpan agenda:", error);
+      alert("Gagal menyimpan agenda.");
     }
-    setIsModalOpen(false);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm("Yakin ingin menghapus agenda ini?")) {
-      setAgendas(agendas.filter((a) => a.id !== id));
+      try {
+        await deleteAgenda(id);
+        mutate();
+      } catch (error) {
+        console.error("Gagal menghapus:", error);
+        alert("Gagal menghapus agenda.");
+      }
     }
   };
 
@@ -203,31 +180,93 @@ export default function AgendaPage() {
             )}
           </Button>
 
-          {/* Date picker popover */}
-          {showDatePicker && (
-            <div className="absolute z-40 top-full mt-2 left-0 bg-white rounded-xl shadow-lg border border-border p-3 animate-dropdownOpen">
-              <input
-                type="date"
-                value={filterDate}
-                onChange={(e) => {
-                  setFilterDate(e.target.value);
-                  setShowDatePicker(false);
-                }}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-              />
-              {filterDate && (
-                <button
-                  onClick={() => {
-                    setFilterDate("");
-                    setShowDatePicker(false);
-                  }}
-                  className="w-full mt-2 text-xs text-danger hover:underline cursor-pointer text-center"
-                >
-                  Hapus filter tanggal
-                </button>
-              )}
-            </div>
-          )}
+          {/* Mini calendar popover */}
+          {showDatePicker && (() => {
+            const firstDay = new Date(calYear, calMonth, 1).getDay();
+            const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+            const today = new Date();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+            const prevMonth = () => {
+              if (calMonth === 0) { setCalMonth(11); setCalYear(calYear - 1); }
+              else setCalMonth(calMonth - 1);
+            };
+            const nextMonth = () => {
+              if (calMonth === 11) { setCalMonth(0); setCalYear(calYear + 1); }
+              else setCalMonth(calMonth + 1);
+            };
+
+            return (
+              <div className="absolute z-40 top-full mt-2 right-0 bg-white rounded-xl shadow-lg border border-border p-3 animate-dropdownOpen w-[256px]">
+                {/* Month/Year navigation */}
+                <div className="flex items-center justify-between mb-3">
+                  <button onClick={prevMonth} className="p-1 rounded-lg hover:bg-gray-100 text-text-secondary transition-colors cursor-pointer">
+                    <HiChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="text-sm font-semibold text-text-primary">
+                    {BULAN_PANJANG[calMonth]} {calYear}
+                  </span>
+                  <button onClick={nextMonth} className="p-1 rounded-lg hover:bg-gray-100 text-text-secondary transition-colors cursor-pointer">
+                    <HiChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Day headers */}
+                <div className="grid grid-cols-7 gap-0 mb-1">
+                  {HARI_SINGKAT.map((h) => (
+                    <div key={h} className="text-center text-[10px] font-semibold text-text-secondary/60 uppercase py-1">
+                      {h}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Date cells */}
+                <div className="grid grid-cols-7 gap-0">
+                  {Array.from({ length: firstDay }).map((_, i) => (
+                    <div key={`empty-${i}`} />
+                  ))}
+                  {Array.from({ length: daysInMonth }).map((_, i) => {
+                    const day = i + 1;
+                    const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                    const isToday = dateStr === todayStr;
+                    const isSelected = dateStr === filterDate;
+
+                    return (
+                      <button
+                        key={day}
+                        onClick={() => {
+                          setFilterDate(dateStr);
+                          setShowDatePicker(false);
+                        }}
+                        className={`w-8 h-8 mx-auto flex items-center justify-center rounded-lg text-xs font-medium transition-all cursor-pointer
+                          ${isSelected
+                            ? "bg-primary text-white font-bold shadow-sm"
+                            : isToday
+                              ? "bg-primary/10 text-primary font-bold ring-1 ring-primary/30"
+                              : "text-text-primary hover:bg-gray-100"
+                          }`}
+                      >
+                        {day}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Clear filter */}
+                {filterDate && (
+                  <button
+                    onClick={() => {
+                      setFilterDate("");
+                      setShowDatePicker(false);
+                    }}
+                    className="w-full mt-3 pt-2 border-t border-border text-xs text-danger hover:text-danger/80 cursor-pointer text-center transition-colors"
+                  >
+                    Hapus filter tanggal
+                  </button>
+                )}
+              </div>
+            );
+          })()}
         </div>
 
         {hasActiveFilters && (
@@ -246,7 +285,11 @@ export default function AgendaPage() {
       </div>
 
       {/* Agenda List */}
-      {filteredAgendas.length === 0 ? (
+      {isLoading ? (
+        <div className="flex justify-center items-center py-20">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+        </div>
+      ) : filteredAgendas.length === 0 ? (
         <EmptyState
           icon={<HiOutlineCalendar className="w-8 h-8" />}
           title="Belum ada agenda"
@@ -266,24 +309,25 @@ export default function AgendaPage() {
             return (
               <div
                 key={agenda.id}
-                className="bg-card rounded-xl shadow-sm border border-border overflow-hidden hover:shadow-md transition-shadow"
+                className="bg-card rounded-xl shadow-sm border border-border overflow-hidden hover:shadow-md transition-all duration-200 group"
               >
                 <div className="flex">
                   {/* Mini calendar date block */}
-                  <div className="w-20 sm:w-24 shrink-0 bg-primary/5 flex flex-col items-center justify-center py-5 border-r border-border">
-                    <span className="text-xs font-medium text-primary/70 uppercase tracking-wider">
+                  <div className="w-[72px] sm:w-[84px] shrink-0 flex flex-col items-center justify-center py-4 relative overflow-hidden bg-gradient-to-b from-primary/10 to-primary/5">
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-primary" />
+                    <span className="text-[10px] font-semibold text-primary/60 uppercase tracking-widest">
                       {dp.hari}
                     </span>
-                    <span className="text-3xl sm:text-4xl font-extrabold text-primary leading-none mt-1">
+                    <span className="text-2xl sm:text-3xl font-extrabold text-primary leading-none mt-0.5">
                       {dp.tanggal}
                     </span>
-                    <span className="text-xs font-semibold text-primary/70 mt-1">
-                      {dp.bulan} {dp.tahun}
+                    <span className="text-[11px] font-medium text-primary/60 mt-0.5">
+                      {dp.bulan}
                     </span>
                   </div>
 
                   {/* Content */}
-                  <div className="flex-1 p-4 sm:p-5 min-w-0">
+                  <div className="flex-1 p-4 sm:p-5 min-w-0 border-l border-border">
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <div className="flex-1 min-w-0">
                         <h3 className="text-base sm:text-lg font-bold text-text-primary truncate">
@@ -295,7 +339,7 @@ export default function AgendaPage() {
                       <div className="flex gap-1 shrink-0">
                         <button
                           onClick={() => openEditModal(agenda)}
-                          className="p-1.5 rounded-lg hover:bg-blue-50 text-primary transition-colors cursor-pointer"
+                          className="p-1.5 rounded-lg hover:bg-primary/10 text-primary transition-colors cursor-pointer"
                         >
                           <HiOutlinePencil className="w-4 h-4" />
                         </button>
