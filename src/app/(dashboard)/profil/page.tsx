@@ -5,17 +5,29 @@ import { useAuth } from "@/hooks/useAuth";
 import { ROLE_LABELS } from "@/constants";
 import { usePermission } from "@/hooks/usePermission";
 import { formatDate } from "@/lib/utils";
+import { useState } from "react";
 import {
   HiOutlineMail,
   HiOutlineShieldCheck,
   HiOutlineCalendar,
   HiOutlineLogout,
+  HiOutlineKey,
+  HiOutlineLockClosed,
 } from "react-icons/hi";
+import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
 import { signOut } from "@/services/firebase/auth";
 
 export default function ProfilPage() {
-  const { userData } = useAuth();
+  const { userData, user } = useAuth();
   const { canEdit } = usePermission();
+
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   if (!userData) {
     return (
@@ -31,6 +43,46 @@ export default function ProfilPage() {
       window.location.href = "/login";
     } catch {
       window.location.href = "/login";
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError("");
+    setPasswordSuccess("");
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError("Konfirmasi password baru tidak cocok.");
+      return;
+    }
+    if (newPassword.length < 6) {
+      setPasswordError("Password baru minimal 6 karakter.");
+      return;
+    }
+
+    if (!user || !user.email) return;
+
+    try {
+      setIsChangingPassword(true);
+      const { EmailAuthProvider, reauthenticateWithCredential, updatePassword } = await import("firebase/auth");
+      const credential = EmailAuthProvider.credential(user.email, oldPassword);
+      await reauthenticateWithCredential(user, credential);
+      await updatePassword(user, newPassword);
+      
+      setPasswordSuccess("Password berhasil diubah.");
+      setOldPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error: unknown) {
+      console.error(error);
+      const err = error as { code?: string; message?: string };
+      if (err.code === "auth/invalid-credential" || err.code === "auth/wrong-password") {
+        setPasswordError("Password lama salah.");
+      } else {
+        setPasswordError(err.message || "Terjadi kesalahan saat mengganti password.");
+      }
+    } finally {
+      setIsChangingPassword(false);
     }
   };
 
@@ -164,6 +216,68 @@ export default function ProfilPage() {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Change Password Section */}
+        <div className="bg-card rounded-2xl shadow-sm border border-border p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <HiOutlineKey className="w-5 h-5 text-text-secondary" />
+            <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wider">
+              Ganti Password
+            </h3>
+          </div>
+
+          {passwordSuccess && (
+            <div className="mb-4 p-3 rounded-xl bg-green-50 border border-green-200 text-success text-sm font-medium animate-slideUp">
+              {passwordSuccess}
+            </div>
+          )}
+
+          {passwordError && (
+            <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-danger text-sm font-medium">
+              {passwordError}
+            </div>
+          )}
+
+          <form onSubmit={handleChangePassword} className="space-y-4">
+            <Input
+              label="Password Lama"
+              type="password"
+              placeholder="Masukkan password lama"
+              icon={<HiOutlineLockClosed className="w-4 h-4" />}
+              value={oldPassword}
+              onChange={(e) => setOldPassword(e.target.value)}
+              required
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+              <Input
+                label="Password Baru"
+                type="password"
+                placeholder="Minimal 6 karakter"
+                icon={<HiOutlineLockClosed className="w-4 h-4" />}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+                minLength={6}
+              />
+              <Input
+                label="Konfirmasi Baru"
+                type="password"
+                placeholder="Ulangi password baru"
+                icon={<HiOutlineLockClosed className="w-4 h-4" />}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                minLength={6}
+              />
+            </div>
+            
+            <div className="pt-2">
+              <Button type="submit" size="sm" disabled={isChangingPassword}>
+                {isChangingPassword ? "Menyimpan..." : "Simpan Password"}
+              </Button>
+            </div>
+          </form>
         </div>
 
         {/* Logout Button — mobile friendly */}

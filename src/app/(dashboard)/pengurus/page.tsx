@@ -13,12 +13,14 @@ import {
   deleteUser,
   getUsers,
   updateUser,
+  sendUserPasswordReset,
 } from "@/features/users/usersService";
 import { formatDate } from "@/lib/utils";
 import type { User, UserFormData } from "@/types";
 import React, { useCallback, useEffect, useState } from "react";
 import { usePermission } from "@/hooks/usePermission";
 import {
+  HiOutlineKey,
   HiOutlineLockClosed,
   HiOutlineMail,
   HiOutlinePencil,
@@ -156,6 +158,17 @@ export default function PengurusPage() {
     }
   };
 
+  const handleResetPassword = async (email: string) => {
+    if (!confirm(`Kirim email reset password ke ${email}?`)) return;
+    try {
+      await sendUserPasswordReset(email);
+      setSuccess("Link reset password berhasil dikirim ke email pengguna.");
+    } catch (err: unknown) {
+      console.error("Failed to send reset email:", err);
+      setError("Gagal mengirim email reset password.");
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm("Hapus pengurus ini? Tindakan ini tidak dapat dibatalkan."))
       return;
@@ -244,6 +257,13 @@ export default function PengurusPage() {
                 </div>
                 {canEdit && (
                 <div className="flex gap-1">
+                  <button
+                    onClick={() => handleResetPassword(user.email)}
+                    title="Kirim Email Reset Password"
+                    className="p-1.5 rounded-lg hover:bg-orange-50 text-orange-500 cursor-pointer transition-colors"
+                  >
+                    <HiOutlineKey className="w-4 h-4" />
+                  </button>
                   <button
                     onClick={() => openEdit(user)}
                     className="p-1.5 rounded-lg hover:bg-blue-50 text-primary cursor-pointer transition-colors"

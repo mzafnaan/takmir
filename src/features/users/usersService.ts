@@ -85,3 +85,10 @@ export async function deleteUser(id: string): Promise<void> {
   const db = await getFirebaseDb();
   await deleteDoc(doc(db, COLLECTION, id));
 }
+
+export async function sendUserPasswordReset(email: string): Promise<void> {
+  const { sendPasswordResetEmail } = await import("firebase/auth");
+  const { getFirebaseAuth } = await import("@/services/firebase/config");
+  const auth = await getFirebaseAuth();
+  await sendPasswordResetEmail(auth, email);
+}
