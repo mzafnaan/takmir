@@ -58,8 +58,8 @@ body {
 /* Page transition */
 @keyframes slideUpFade {
   from {
-    opacity: 0;
-    transform: translateY(10px);
+    opacity: 1;
+    transform: translateY(6px);
   }
   to {
     opacity: 1;

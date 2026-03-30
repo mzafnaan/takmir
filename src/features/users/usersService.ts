@@ -1,15 +1,6 @@
 import { createAuthUser } from "@/services/firebase/auth";
-import { db } from "@/services/firebase/config";
+import { getFirebaseDb } from "@/services/firebase/config";
 import type { User } from "@/types";
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  getDocs,
-  query,
-  updateDoc,
-} from "firebase/firestore";
 
 const COLLECTION = "users";
 
@@ -27,6 +18,8 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 
 export async function getUsers(): Promise<User[]> {
   try {
+    const { collection, getDocs, query } = await import("firebase/firestore");
+    const db = await getFirebaseDb();
     const q = query(collection(db, COLLECTION));
     const snapshot = await withTimeout(getDocs(q), 8000);
     return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as User);
@@ -49,6 +42,9 @@ export async function createUser(data: {
   password: string;
   role: string;
 }): Promise<User> {
+  const { addDoc, collection } = await import("firebase/firestore");
+  const db = await getFirebaseDb();
+
   // 1. Create Firebase Auth user via secondary app
   const uid = await createAuthUser(data.email, data.password);
 
@@ -69,6 +65,8 @@ export async function createUser(data: {
 }
 
 export async function addUser(data: Omit<User, "id">): Promise<string> {
+  const { addDoc, collection } = await import("firebase/firestore");
+  const db = await getFirebaseDb();
   const docRef = await addDoc(collection(db, COLLECTION), data);
   return docRef.id;
 }
@@ -77,9 +75,13 @@ export async function updateUser(
   id: string,
   data: Partial<User>,
 ): Promise<void> {
+  const { doc, updateDoc } = await import("firebase/firestore");
+  const db = await getFirebaseDb();
   await updateDoc(doc(db, COLLECTION, id), data);
 }
 
 export async function deleteUser(id: string): Promise<void> {
+  const { deleteDoc, doc } = await import("firebase/firestore");
+  const db = await getFirebaseDb();
   await deleteDoc(doc(db, COLLECTION, id));
 }

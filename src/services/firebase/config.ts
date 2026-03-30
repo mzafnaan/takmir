@@ -1,6 +1,4 @@
-import { getApp, getApps, initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
@@ -12,7 +10,36 @@ const firebaseConfig = {
 };
 
 // Prevent multiple Firebase instances
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+function getFirebaseApp(): FirebaseApp {
+  return !getApps().length ? initializeApp(firebaseConfig) : getApp();
+}
 
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+// Lazy-loaded Auth instance (firebase/auth is ~100KB)
+let _auth: import("firebase/auth").Auth | null = null;
+export async function getFirebaseAuth() {
+  if (!_auth) {
+    const { getAuth } = await import("firebase/auth");
+    _auth = getAuth(getFirebaseApp());
+  }
+  return _auth;
+}
+
+// Lazy-loaded Firestore instance (firebase/firestore is ~250KB)
+let _db: import("firebase/firestore").Firestore | null = null;
+export async function getFirebaseDb() {
+  if (!_db) {
+    const { getFirestore } = await import("firebase/firestore");
+    _db = getFirestore(getFirebaseApp());
+  }
+  return _db;
+}
+
+// Synchronous getters for cases where init is already done (e.g. auth listener)
+export function getAuthSync() {
+  if (!_auth) throw new Error("Auth not initialized. Call getFirebaseAuth() first.");
+  return _auth;
+}
+export function getDbSync() {
+  if (!_db) throw new Error("Firestore not initialized. Call getFirebaseDb() first.");
+  return _db;
+}

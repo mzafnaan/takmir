@@ -3,8 +3,6 @@
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { signIn, signOut } from "@/services/firebase/auth";
-import { db } from "@/services/firebase/config";
-import { collection, getDocs, query, where } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 
@@ -23,6 +21,10 @@ export default function LoginPage() {
     try {
       await signIn(email, password);
       
+      const { getFirebaseDb } = await import("@/services/firebase/config");
+      const { collection, getDocs, query, where } = await import("firebase/firestore");
+      const db = await getFirebaseDb();
+
       // Validasi apakah email masih terdaftar di koleksi users Firestore
       const q = query(collection(db, "users"), where("email", "==", email));
       const querySnapshot = await getDocs(q);

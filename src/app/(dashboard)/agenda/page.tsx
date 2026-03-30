@@ -4,18 +4,14 @@ import PageHeader from "@/components/layout/PageHeader";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import EmptyState from "@/components/ui/EmptyState";
-import Input from "@/components/ui/Input";
-import Modal from "@/components/ui/Modal";
 import Select from "@/components/ui/Select";
 import { JENIS_KEGIATAN } from "@/constants";
 import type { Agenda } from "@/types";
 import React, { useMemo, useState } from "react";
 import useSWR from "swr";
-import { useAuth } from "@/hooks/useAuth";
+import dynamic from "next/dynamic";
 import {
   getAgendas,
-  addAgenda,
-  updateAgenda,
   deleteAgenda,
 } from "@/features/agenda/agendaService";
 import { usePermission } from "@/hooks/usePermission";
@@ -27,6 +23,10 @@ import {
   HiChevronLeft,
   HiChevronRight,
 } from "react-icons/hi";
+
+const AgendaModal = dynamic(() => import("@/components/agenda/AgendaModal"), {
+  ssr: false,
+});
 
 const BULAN_PENDEK = [
   "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
@@ -54,27 +54,11 @@ function parseDateParts(dateStr: string) {
   };
 }
 
-
-
-const emptyAgenda: Omit<Agenda, "id"> = {
-  judul: "",
-  jenisKegiatan: "",
-  tanggal: "",
-  waktuMulai: "",
-  waktuSelesai: "",
-  pemateri: "",
-  lokasi: "",
-  deskripsi: "",
-  createdBy: "admin",
-};
-
 export default function AgendaPage() {
-  const { userData } = useAuth();
   const { canEdit } = usePermission();
   const { data: agendas = [], mutate, isLoading } = useSWR("agendas", getAgendas);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAgenda, setEditingAgenda] = useState<Agenda | null>(null);
-  const [formData, setFormData] = useState(emptyAgenda);
   const [filterJenis, setFilterJenis] = useState("");
   const [filterDate, setFilterDate] = useState("");
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -91,33 +75,12 @@ export default function AgendaPage() {
 
   const openAddModal = () => {
     setEditingAgenda(null);
-    setFormData(emptyAgenda);
     setIsModalOpen(true);
   };
 
   const openEditModal = (agenda: Agenda) => {
     setEditingAgenda(agenda);
-    setFormData(agenda);
     setIsModalOpen(true);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      if (editingAgenda) {
-        await updateAgenda(editingAgenda.id, formData);
-      } else {
-        await addAgenda({
-          ...formData,
-          createdBy: userData?.name || "Admin",
-        });
-      }
-      setIsModalOpen(false);
-      mutate();
-    } catch (error) {
-      console.error("Gagal menyimpan agenda:", error);
-      alert("Gagal menyimpan agenda.");
-    }
   };
 
   const handleDelete = async (id: string) => {
@@ -130,10 +93,6 @@ export default function AgendaPage() {
         alert("Gagal menghapus agenda.");
       }
     }
-  };
-
-  const updateForm = (field: string, value: string) => {
-    setFormData({ ...formData, [field]: value });
   };
 
   const hasActiveFilters = filterJenis || filterDate;
@@ -372,96 +331,15 @@ export default function AgendaPage() {
         </div>
       )}
 
-      {/* Add/Edit Modal */}
-      <Modal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title={editingAgenda ? "Edit Agenda" : "Tambah Agenda"}
-        subtitle={
-          editingAgenda
-            ? "Perbarui informasi agenda"
-            : "Isi data untuk menambahkan agenda baru"
-        }
-        size="lg"
-      >
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <Input
-            label="Judul Kegiatan"
-            placeholder="Masukkan judul kegiatan"
-            value={formData.judul}
-            onChange={(e) => updateForm("judul", e.target.value)}
-            required
-          />
-          <Select
-            label="Jenis Kegiatan"
-            value={formData.jenisKegiatan}
-            onChange={(e) => updateForm("jenisKegiatan", e.target.value)}
-            options={JENIS_KEGIATAN.map((j) => ({ value: j, label: j }))}
-            required
-          />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
-              label="Tanggal"
-              type="date"
-              value={formData.tanggal}
-              onChange={(e) => updateForm("tanggal", e.target.value)}
-              required
-            />
-            <Input
-              label="Waktu Mulai"
-              type="time"
-              value={formData.waktuMulai}
-              onChange={(e) => updateForm("waktuMulai", e.target.value)}
-              required
-            />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
-              label="Waktu Selesai"
-              type="time"
-              value={formData.waktuSelesai}
-              onChange={(e) => updateForm("waktuSelesai", e.target.value)}
-              required
-            />
-            <Input
-              label="Pemateri"
-              value={formData.pemateri}
-              onChange={(e) => updateForm("pemateri", e.target.value)}
-              placeholder="Nama pemateri (opsional)"
-            />
-          </div>
-          <Input
-            label="Lokasi"
-            placeholder="Masukkan lokasi kegiatan"
-            value={formData.lokasi}
-            onChange={(e) => updateForm("lokasi", e.target.value)}
-            required
-          />
-          <div>
-            <label className="block text-sm font-semibold text-text-primary mb-1.5">
-              Deskripsi
-            </label>
-            <textarea
-              className="w-full px-4 py-3 text-base rounded-xl border border-border bg-white text-text-primary placeholder-text-secondary/70 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary focus:shadow-sm transition-all duration-200 min-h-[100px] resize-y"
-              value={formData.deskripsi}
-              onChange={(e) => updateForm("deskripsi", e.target.value)}
-              placeholder="Deskripsi kegiatan (opsional)"
-            />
-          </div>
-          <div className="flex gap-3 pt-3">
-            <Button type="submit" fullWidth>
-              {editingAgenda ? "Simpan Perubahan" : "Tambah Agenda"}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setIsModalOpen(false)}
-            >
-              Batal
-            </Button>
-          </div>
-        </form>
-      </Modal>
+      {/* Add/Edit Modal (Lazy Loaded) */}
+      {isModalOpen && (
+        <AgendaModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          editingAgenda={editingAgenda}
+          onSuccess={() => mutate()}
+        />
+      )}
     </>
   );
 }

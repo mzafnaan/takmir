@@ -4,7 +4,8 @@ import StatCard from "@/components/cards/StatCard";
 import PageHeader from "@/components/layout/PageHeader";
 import Badge from "@/components/ui/Badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import React from "react";
+import React, { useMemo } from "react";
+import Link from "next/link";
 import useSWR from "swr";
 import { getAgendas } from "@/features/agenda/agendaService";
 import { getLatestPengumuman } from "@/features/pengumuman/pengumumanService";
@@ -36,8 +37,8 @@ export default function DashboardPage() {
   const { data: transaksi = [], isLoading: loadingTransaksi } = useSWR("transaksi", getTransaksi);
   const { data: inventaris = [], isLoading: loadingInventaris } = useSWR("inventaris", getInventaris);
 
-  const saldo = Array.isArray(transaksi) ? transaksi.reduce((acc, t) => acc + (t.jenis === "pemasukan" ? t.nominal : -t.nominal), 0) : 0;
-  const totalInventaris = Array.isArray(inventaris) ? inventaris.reduce((acc, i) => acc + i.total, 0) : 0;
+  const saldo = useMemo(() => Array.isArray(transaksi) ? transaksi.reduce((acc, t) => acc + (t.jenis === "pemasukan" ? t.nominal : -t.nominal), 0) : 0, [transaksi]);
+  const totalInventaris = useMemo(() => Array.isArray(inventaris) ? inventaris.reduce((acc, i) => acc + i.total, 0) : 0, [inventaris]);
   const isLoading = loadingAgendas || loadingPengumuman || loadingTransaksi || loadingInventaris;
 
   return (
@@ -54,24 +55,28 @@ export default function DashboardPage() {
           value={formatCurrency(saldo)}
           icon={<HiOutlineCash className="w-6 h-6" />}
           color="text-success"
+          href="/keuangan"
         />
         <StatCard
           title="Agenda Bulan Ini"
           value={agendas.length}
           icon={<HiOutlineCalendar className="w-6 h-6" />}
           color="text-primary"
+          href="/agenda"
         />
         <StatCard
           title="Pengumuman Aktif"
           value={pengumuman.length}
           icon={<HiOutlineSpeakerphone className="w-6 h-6" />}
           color="text-warning"
+          href="/pengumuman"
         />
         <StatCard
           title="Total Inventaris"
           value={totalInventaris}
           icon={<HiOutlineArchive className="w-6 h-6" />}
           color="text-secondary"
+          href="/inventaris"
         />
       </div>
 
@@ -90,7 +95,8 @@ export default function DashboardPage() {
               <div className="text-center py-4 text-text-secondary w-full">Belum ada agenda terdekat</div>
             ) : (
               agendas.slice(0, 3).map((agenda) => (
-                <div
+                <Link
+                  href="/agenda"
                   key={agenda.id}
                   className="flex items-start gap-4 p-4 rounded-xl border border-gray-100 bg-white hover:border-primary/30 hover:shadow-sm transition-all"
                 >
@@ -115,7 +121,7 @@ export default function DashboardPage() {
                     </p>
                   </div>
                   <Badge variant="info">{agenda.jenisKegiatan}</Badge>
-                </div>
+                </Link>
               ))
             )}
           </div>
@@ -134,9 +140,10 @@ export default function DashboardPage() {
               <div className="text-center py-4 text-text-secondary w-full">Belum ada pengumuman terbaru</div>
             ) : (
               pengumuman.map((item) => (
-                <div
+                <Link
+                  href="/pengumuman"
                   key={item.id}
-                  className="p-4 rounded-xl border border-gray-100 bg-white hover:border-primary/30 hover:shadow-sm transition-all"
+                  className="block p-4 rounded-xl border border-gray-100 bg-white hover:border-primary/30 hover:shadow-sm transition-all"
                 >
                   <div className="flex items-start justify-between gap-3 mb-1">
                     <h3 className="text-base font-semibold text-text-primary">
@@ -153,7 +160,7 @@ export default function DashboardPage() {
                       {formatDate(item.createdAt)}
                     </span>
                   </div>
-                </div>
+                </Link>
               ))
             )}
           </div>

@@ -1,17 +1,14 @@
-import { deleteApp, initializeApp } from "firebase/app";
-import {
-  createUserWithEmailAndPassword,
-  signOut as firebaseSignOut,
-  getAuth,
-  signInWithEmailAndPassword,
-} from "firebase/auth";
-import { auth } from "./config";
+import { getFirebaseAuth } from "./config";
 
 export async function signIn(email: string, password: string) {
+  const { signInWithEmailAndPassword } = await import("firebase/auth");
+  const auth = await getFirebaseAuth();
   return signInWithEmailAndPassword(auth, email, password);
 }
 
 export async function signOut() {
+  const { signOut: firebaseSignOut } = await import("firebase/auth");
+  const auth = await getFirebaseAuth();
   return firebaseSignOut(auth);
 }
 
@@ -23,7 +20,10 @@ export async function createAuthUser(
   email: string,
   password: string,
 ): Promise<string> {
-  // Create a secondary Firebase app to avoid signing out the current user
+  const { initializeApp, deleteApp } = await import("firebase/app");
+  const { createUserWithEmailAndPassword, getAuth } = await import("firebase/auth");
+
+  const auth = await getFirebaseAuth();
   const secondaryApp = initializeApp(auth.app.options, "SecondaryApp");
   const secondaryAuth = getAuth(secondaryApp);
 
@@ -35,7 +35,6 @@ export async function createAuthUser(
     );
     return credential.user.uid;
   } finally {
-    // Always clean up the secondary app
     await deleteApp(secondaryApp);
   }
 }

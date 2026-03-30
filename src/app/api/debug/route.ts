@@ -1,9 +1,11 @@
-import { db } from "@/services/firebase/config";
-import { collection, getDocs } from "firebase/firestore";
 import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
+    const { getFirebaseDb } = await import("@/services/firebase/config");
+    const { collection, getDocs } = await import("firebase/firestore");
+    const db = await getFirebaseDb();
+    
     const usersSnap = await getDocs(collection(db, "users"));
     const users = usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     

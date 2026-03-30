@@ -1,20 +1,12 @@
-import { db } from "@/services/firebase/config";
+import { getFirebaseDb } from "@/services/firebase/config";
 import type { Transaksi } from "@/types";
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  getDocs,
-  orderBy,
-  query,
-  updateDoc,
-} from "firebase/firestore";
 
 const COLLECTION = "transaksi";
 
 export async function getTransaksi(): Promise<Transaksi[]> {
   try {
+    const { collection, getDocs, orderBy, query } = await import("firebase/firestore");
+    const db = await getFirebaseDb();
     const q = query(collection(db, COLLECTION), orderBy("tanggal", "desc"));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(
@@ -52,6 +44,8 @@ export function calculateSaldo(transaksi: Transaksi[]): {
 export async function addTransaksi(
   data: Omit<Transaksi, "id">,
 ): Promise<string> {
+  const { addDoc, collection } = await import("firebase/firestore");
+  const db = await getFirebaseDb();
   const docRef = await addDoc(collection(db, COLLECTION), data);
   return docRef.id;
 }
@@ -60,9 +54,13 @@ export async function updateTransaksi(
   id: string,
   data: Partial<Transaksi>,
 ): Promise<void> {
+  const { doc, updateDoc } = await import("firebase/firestore");
+  const db = await getFirebaseDb();
   await updateDoc(doc(db, COLLECTION, id), data);
 }
 
 export async function deleteTransaksi(id: string): Promise<void> {
+  const { deleteDoc, doc } = await import("firebase/firestore");
+  const db = await getFirebaseDb();
   await deleteDoc(doc(db, COLLECTION, id));
 }

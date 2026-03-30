@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 
 interface StatCardProps {
   title: string;
@@ -8,6 +9,7 @@ interface StatCardProps {
   icon: React.ReactNode;
   color?: string;
   trend?: string;
+  href?: string;
 }
 
 export default function StatCard({
@@ -16,9 +18,10 @@ export default function StatCard({
   icon,
   color = "text-primary",
   trend,
+  href,
 }: StatCardProps) {
-  return (
-    <div className="bg-card rounded-xl shadow-sm border border-border p-5 hover:shadow-md transition-shadow duration-200">
+  const content = (
+    <div className={`bg-card rounded-xl shadow-sm border border-border p-5 hover:shadow-md transition-shadow duration-200 h-full ${href ? "hover:border-primary/50 cursor-pointer" : ""}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-text-secondary mb-1 truncate">
@@ -35,4 +38,14 @@ export default function StatCard({
       </div>
     </div>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className="block h-full block-link">
+        {content}
+      </Link>
+    );
+  }
+
+  return content;
 }

@@ -4,20 +4,16 @@ import PageHeader from "@/components/layout/PageHeader";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import EmptyState from "@/components/ui/EmptyState";
-import Input from "@/components/ui/Input";
-import Modal from "@/components/ui/Modal";
 import Select from "@/components/ui/Select";
 import { KATEGORI_PENGUMUMAN, URGENSI_PENGUMUMAN } from "@/constants";
 import { formatDate } from "@/lib/utils";
 import type { Pengumuman } from "@/types";
 import React, { useMemo, useState } from "react";
 import useSWR from "swr";
-import { useAuth } from "@/hooks/useAuth";
+import dynamic from "next/dynamic";
 import { usePermission } from "@/hooks/usePermission";
 import {
   getPengumuman,
-  addPengumuman,
-  updatePengumuman,
   deletePengumuman,
 } from "@/features/pengumuman/pengumumanService";
 import {
@@ -28,7 +24,10 @@ import {
   HiPlus,
 } from "react-icons/hi";
 
-// removed dummy data
+const PengumumanModal = dynamic(
+  () => import("@/components/pengumuman/PengumumanModal"),
+  { ssr: false }
+);
 
 const urgensiBadgeVariant = (urgensi: string) => {
   switch (urgensi) {
@@ -41,23 +40,12 @@ const urgensiBadgeVariant = (urgensi: string) => {
   }
 };
 
-const emptyPengumuman: Omit<Pengumuman, "id"> = {
-  judul: "",
-  deskripsi: "",
-  kategori: "Informasi Umum",
-  urgensi: "Informasi",
-  createdBy: "admin",
-  createdAt: new Date().toISOString().split("T")[0],
-};
-
 export default function PengumumanPage() {
-  const { userData } = useAuth();
   const { canEdit } = usePermission();
   const { data: pengumuman = [], mutate, isLoading } = useSWR("pengumuman", getPengumuman);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Pengumuman | null>(null);
-  const [formData, setFormData] = useState(emptyPengumuman);
   const [search, setSearch] = useState("");
   const [filterKategori, setFilterKategori] = useState("");
   const [filterUrgensi, setFilterUrgensi] = useState("");
@@ -78,34 +66,12 @@ export default function PengumumanPage() {
 
   const openAddModal = () => {
     setEditingItem(null);
-    setFormData(emptyPengumuman);
     setIsModalOpen(true);
   };
 
   const openEditModal = (item: Pengumuman) => {
     setEditingItem(item);
-    setFormData(item);
     setIsModalOpen(true);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      if (editingItem) {
-        await updatePengumuman(editingItem.id, formData);
-      } else {
-        await addPengumuman({
-          ...formData,
-          createdAt: new Date().toISOString().split("T")[0],
-          createdBy: userData?.name || "Admin",
-        });
-      }
-      setIsModalOpen(false);
-      mutate();
-    } catch (error) {
-      console.error("Gagal menyimpan pengumuman:", error);
-      alert("Gagal menyimpan pengumuman.");
-    }
   };
 
   const handleDelete = async (id: string) => {
@@ -118,10 +84,6 @@ export default function PengumumanPage() {
         alert("Gagal menghapus pengumuman.");
       }
     }
-  };
-
-  const updateForm = (field: string, value: string) => {
-    setFormData({ ...formData, [field]: value });
   };
 
   return (
@@ -151,18 +113,22 @@ export default function PengumumanPage() {
               className="w-full pl-10 pr-4 py-3 text-base rounded-xl border border-border bg-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
             />
           </div>
-          <Select
-            value={filterKategori}
-            onChange={(e) => setFilterKategori(e.target.value)}
-            options={KATEGORI_PENGUMUMAN.map((k) => ({ value: k, label: k }))}
-            placeholder="Semua kategori"
-          />
-          <Select
-            value={filterUrgensi}
-            onChange={(e) => setFilterUrgensi(e.target.value)}
-            options={URGENSI_PENGUMUMAN.map((u) => ({ value: u, label: u }))}
-            placeholder="Semua urgensi"
-          />
+          <div className="w-full sm:w-[200px]">
+            <Select
+              value={filterKategori}
+              onChange={(e) => setFilterKategori(e.target.value)}
+              options={KATEGORI_PENGUMUMAN.map((k) => ({ value: k, label: k }))}
+              placeholder="Semua kategori"
+            />
+          </div>
+          <div className="w-full sm:w-[200px]">
+            <Select
+              value={filterUrgensi}
+              onChange={(e) => setFilterUrgensi(e.target.value)}
+              options={URGENSI_PENGUMUMAN.map((u) => ({ value: u, label: u }))}
+              placeholder="Semua urgensi"
+            />
+          </div>
         </div>
       </div>
 
@@ -229,68 +195,15 @@ export default function PengumumanPage() {
         </div>
       )}
 
-      {/* Add/Edit Modal */}
-      <Modal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title={editingItem ? "Edit Pengumuman" : "Buat Pengumuman"}
-        subtitle={
-          editingItem
-            ? "Perbarui informasi pengumuman"
-            : "Isi data untuk membuat pengumuman baru"
-        }
-        size="lg"
-      >
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <Input
-            label="Judul"
-            placeholder="Masukkan judul pengumuman"
-            value={formData.judul}
-            onChange={(e) => updateForm("judul", e.target.value)}
-            required
-          />
-          <div>
-            <label className="block text-sm font-semibold text-text-primary mb-1.5">
-              Deskripsi
-            </label>
-            <textarea
-              className="w-full px-4 py-3 text-base rounded-xl border border-border bg-white text-text-primary placeholder-text-secondary/70 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary focus:shadow-sm transition-all duration-200 min-h-[120px] resize-y"
-              placeholder="Tulis deskripsi pengumuman..."
-              value={formData.deskripsi}
-              onChange={(e) => updateForm("deskripsi", e.target.value)}
-              required
-            />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Select
-              label="Kategori"
-              value={formData.kategori}
-              onChange={(e) => updateForm("kategori", e.target.value)}
-              options={KATEGORI_PENGUMUMAN.map((k) => ({ value: k, label: k }))}
-              required
-            />
-            <Select
-              label="Urgensi"
-              value={formData.urgensi}
-              onChange={(e) => updateForm("urgensi", e.target.value)}
-              options={URGENSI_PENGUMUMAN.map((u) => ({ value: u, label: u }))}
-              required
-            />
-          </div>
-          <div className="flex gap-3 pt-3">
-            <Button type="submit" fullWidth>
-              {editingItem ? "Simpan Perubahan" : "Buat Pengumuman"}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setIsModalOpen(false)}
-            >
-              Batal
-            </Button>
-          </div>
-        </form>
-      </Modal>
+      {/* Add/Edit Modal (Lazy Loaded) */}
+      {isModalOpen && (
+        <PengumumanModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          editingItem={editingItem}
+          onSuccess={() => mutate()}
+        />
+      )}
     </>
   );
 }
