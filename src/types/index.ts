@@ -67,3 +67,8 @@ export interface AktivitasInventaris {
   tanggal: string;
   oleh: string;
 }
+
+export interface ProfilMasjid {
+  namaMasjid: string;
+  alamat: string;
+}

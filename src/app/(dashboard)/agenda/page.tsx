@@ -189,6 +189,7 @@ export default function AgendaPage() {
                     const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
                     const isToday = dateStr === todayStr;
                     const isSelected = dateStr === filterDate;
+                    const hasAgenda = agendas.some((a) => a.tanggal === dateStr);
 
                     return (
                       <button
@@ -197,7 +198,7 @@ export default function AgendaPage() {
                           setFilterDate(dateStr);
                           setShowDatePicker(false);
                         }}
-                        className={`w-8 h-8 mx-auto flex items-center justify-center rounded-lg text-xs font-medium transition-all cursor-pointer
+                        className={`relative w-8 h-8 mx-auto flex items-center justify-center rounded-lg text-xs font-medium transition-all cursor-pointer
                           ${isSelected
                             ? "bg-primary text-white font-bold shadow-sm"
                             : isToday
@@ -205,7 +206,10 @@ export default function AgendaPage() {
                               : "text-text-primary hover:bg-gray-100"
                           }`}
                       >
-                        {day}
+                        <span className={hasAgenda ? "-mt-1" : ""}>{day}</span>
+                        {hasAgenda && (
+                          <div className="absolute bottom-[3px] w-1 h-1 rounded-full bg-danger" />
+                        )}
                       </button>
                     );
                   })}

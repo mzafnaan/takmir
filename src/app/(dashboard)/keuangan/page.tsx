@@ -12,6 +12,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Transaksi } from "@/types";
 import React, { useMemo, useState } from "react";
 import useSWR from "swr";
+import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermission } from "@/hooks/usePermission";
 import {
@@ -27,9 +28,9 @@ import {
   HiOutlineTrendingDown,
   HiOutlineTrendingUp,
   HiPlus,
+  HiOutlineDocumentDownload,
 } from "react-icons/hi";
 
-// dummy data removed
 type TransaksiForm = Omit<Transaksi, "id">;
 
 const emptyForm: TransaksiForm = {
@@ -117,11 +118,19 @@ export default function KeuanganPage() {
         title="Keuangan"
         subtitle="Kelola kas masjid"
         action={
-          canEdit ? (
-            <Button onClick={openAdd}>
-              <HiPlus className="w-5 h-5" /> Catat Transaksi
-            </Button>
-          ) : undefined
+          <div className="flex gap-2">
+            <Link href="/keuangan/laporan">
+              <Button variant="secondary">
+                <HiOutlineDocumentDownload className="w-5 h-5" />
+                Laporan
+              </Button>
+            </Link>
+            {canEdit && (
+              <Button onClick={openAdd}>
+                <HiPlus className="w-5 h-5" /> Catat Transaksi
+              </Button>
+            )}
+          </div>
         }
       />
 

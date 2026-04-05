@@ -10,7 +10,8 @@ export async function GET() {
     const users = usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     
     return NextResponse.json({ success: true, count: usersSnap.size, users });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message, code: error.code });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ success: false, error: message });
   }
 }

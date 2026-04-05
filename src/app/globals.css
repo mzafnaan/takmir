@@ -127,3 +127,64 @@ body {
 .animate-spin {
   animation: spin 1s linear infinite;
 }
+
+/* ===== PRINT STYLES (Laporan Resmi PDF) ===== */
+@media print {
+  /* Hide all non-content elements */
+  nav,
+  aside,
+  header {
+    display: none !important;
+  }
+
+  /* Reset page layout */
+  body {
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 11px !important;
+    font-family: 'Helvetica Neue', Arial, Helvetica, sans-serif !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    color: #000 !important;
+  }
+
+  /* Main content fills the page */
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    margin-left: 0 !important;
+    max-width: 100% !important;
+  }
+
+  /* A4 page setup */
+  @page {
+    size: A4 portrait;
+    margin: 1.5cm 1.8cm;
+  }
+
+  /* Avoid page-break inside rows */
+  tr {
+    page-break-inside: avoid;
+  }
+
+  /* Keep tfoot together */
+  tfoot {
+    page-break-inside: avoid;
+  }
+
+  /* Table borders must be solid */
+  table {
+    border-collapse: collapse !important;
+  }
+
+  td, th {
+    border-color: #666 !important;
+  }
+
+  /* Preserve colors */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
